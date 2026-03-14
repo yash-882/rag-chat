@@ -1,0 +1,33 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// RAG MODELS
+model pdf {
+  id         String      @id @default(uuid()) @db.Uuid
+  label      String      @db.VarChar(50)
+  file_name  String      @db.VarChar(100)
+  created_at DateTime    @default(now())
+  pdf_chunks pdf_chunk[]
+}
+
+model pdf_chunk {
+  id          String   @id @default(uuid()) @db.Uuid
+  pdf_id      String   @db.Uuid
+  pdf         pdf      @relation(fields: [pdf_id], references: [id], onDelete: Cascade)
+  chunk_text  String
+  embedding   Unsupported("vector(768)")
+
+  @@index([pdf_id])
+}
