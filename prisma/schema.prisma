@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -13,7 +7,6 @@ datasource db {
   provider = "postgresql"
 }
 
-// RAG MODELS
 model pdf {
   id         String      @id @default(uuid()) @db.Uuid
   label      String      @db.VarChar(50)
@@ -27,7 +20,7 @@ model pdf_chunk {
   pdf_id      String   @db.Uuid
   pdf         pdf      @relation(fields: [pdf_id], references: [id], onDelete: Cascade)
   chunk_text  String
-  embedding   Unsupported("vector(768)")
+  embedding   Unsupported("vector(3072)")
 
   @@index([pdf_id])
 }
