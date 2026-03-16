@@ -1,10 +1,9 @@
+//load enviroment variables
+import "../loadEnvVars.js";
+
 import app from "./app.js";
 import { PrismaClient } from '../generated/prisma/client.ts';
 import { PrismaPg } from '@prisma/adapter-pg';
-
-//load enviroment variables
-import dotenv from 'dotenv';
-dotenv.config();
 
 // prisma DB config (postgresql)
 export const prisma = new PrismaClient({
@@ -21,8 +20,8 @@ async function startServer() {
 
     console.log('Connected to PostgreSQL');
 
-    const PORT = process.env.PORT || 8000;
-    app.listen(PORT || 3000, () => console.log(`Listening to PORT: ${PORT}`))
+    const PORT = process.env.PORT || 3000;
+    app.listen(PORT, () => console.log(`Listening to PORT: ${PORT}`))
 
     }
     catch(err){
