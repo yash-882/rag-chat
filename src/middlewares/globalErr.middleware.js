@@ -11,6 +11,14 @@ const getErrorProps = (err) => {
         stack: err.stack,
     }
 
+    // for multer errors
+    const multerErrorCodes = ['LIMIT_UNEXPECTED_FILE', 'LIMIT_FILE_SIZE', 'LIMIT_FILE_COUNT']
+
+    if(multerErrorCodes.includes(err.code)){
+        errProps.statusCode = 400;
+        errProps.isOperational = true;
+    }
+
     return errProps;
 }
 

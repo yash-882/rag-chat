@@ -8,15 +8,16 @@
   "main": "server.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "NODE_ENV=production node server.js",
-    "dev": "NODE_ENV=development nodemon server.js"
+    "start": "NODE_ENV=production node src/server.js",
+    "dev": "NODE_ENV=development nodemon src/server.js"
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.4.2",
     "amqplib": "^0.10.9",
     "dotenv": "^17.3.1",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "multer": "^2.1.1"
   },
   "devDependencies": {
     "prisma": "^7.4.2"
