@@ -12,12 +12,14 @@
     "dev": "NODE_ENV=development nodemon src/server.js"
   },
   "dependencies": {
+    "@google/genai": "^1.45.0",
     "@prisma/adapter-pg": "^7.5.0",
     "@prisma/client": "^7.4.2",
     "amqplib": "^0.10.9",
     "dotenv": "^17.3.1",
     "express": "^5.2.1",
     "multer": "^2.1.1",
+    "openai": "^6.29.0",
     "unpdf": "^1.4.0"
   },
   "devDependencies": {
