@@ -6,7 +6,7 @@ import { PrismaClient } from '../prisma/generated/prisma/client.ts';
 import { PrismaPg } from '@prisma/adapter-pg';
 
 // prisma DB config (postgresql)
-export const prisma = new PrismaClient({
+export const prismaClient = new PrismaClient({
     adapter: new PrismaPg({
         connectionString: process.env.DATABASE_URL
     })
@@ -16,7 +16,7 @@ async function startServer() {
 
     try{
     // verify connection
-    await prisma.$executeRaw`SELECT 1`
+    await prismaClient.$executeRaw`SELECT 1`
 
     console.log('Connected to PostgreSQL');
 
@@ -28,4 +28,5 @@ async function startServer() {
         console.log('Error while starting the server', err);
     }
 }
+
 startServer()
