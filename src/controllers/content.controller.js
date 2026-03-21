@@ -84,7 +84,9 @@ export const getAnswers = async (req, res, next) => {
   // search vector database
   const results = await prismaClient.$queryRaw(
     Prisma.sql`
-    SELECT chunk_text, 1 - (embedding <=> ${JSON.stringify(embeddingsDetails[0].values)}::vector) AS similarity
+    SELECT chunk_text, 1 - (
+      embedding <=> ${JSON.stringify(embeddingsDetails[0].values)}::vector
+      ) AS similarity
     FROM pdf_chunk
     ORDER BY similarity DESC
     LIMIT 5
@@ -95,16 +97,15 @@ export const getAnswers = async (req, res, next) => {
     return next(new opError('No relevant information found for the provided question.', 404))
   }
 
-
+  // clean context
   const context = results.map(r => r.chunk_text).join("\n\n");
 
-  const answer = await getAnswersByAi(`Context: ${context}\n\nQuestion: ${question}`);
-
+  // generate answer
+  const answer = await getAnswersByAi({context, question});
 
   res.json({
     data: {
       answer,
-      sources: results
     }
   });
   
