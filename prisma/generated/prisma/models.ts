@@ -10,4 +10,5 @@
  */
 export type * from './models/pdf.ts'
 export type * from './models/pdf_chunk.ts'
+export type * from './models/user.ts'
 export type * from './commonInputTypes.ts'

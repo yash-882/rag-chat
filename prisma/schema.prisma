@@ -24,3 +24,11 @@ model pdf_chunk {
 
   @@index([pdf_id])
 }
+
+model user {
+  id         String   @id @default(uuid()) @db.Uuid
+  email      String   @unique @db.VarChar(255)
+  password   String   @db.VarChar(70)
+  name       String  @db.VarChar(50) @default("default_name")
+  created_at DateTime @default(now())
+}

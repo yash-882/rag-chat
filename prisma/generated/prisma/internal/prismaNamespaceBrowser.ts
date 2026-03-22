@@ -52,7 +52,8 @@ export const AnyNull = runtime.AnyNull
 
 export const ModelName = {
   pdf: 'pdf',
-  pdf_chunk: 'pdf_chunk'
+  pdf_chunk: 'pdf_chunk',
+  user: 'user'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -88,6 +89,17 @@ export const Pdf_chunkScalarFieldEnum = {
 } as const
 
 export type Pdf_chunkScalarFieldEnum = (typeof Pdf_chunkScalarFieldEnum)[keyof typeof Pdf_chunkScalarFieldEnum]
+
+
+export const UserScalarFieldEnum = {
+  id: 'id',
+  email: 'email',
+  password: 'password',
+  name: 'name',
+  created_at: 'created_at'
+} as const
+
+export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
 
 
 export const SortOrder = {

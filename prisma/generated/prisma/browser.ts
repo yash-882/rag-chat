@@ -27,3 +27,8 @@ export type pdf = Prisma.pdfModel
  * 
  */
 export type pdf_chunk = Prisma.pdf_chunkModel
+/**
+ * Model user
+ * 
+ */
+export type user = Prisma.userModel
