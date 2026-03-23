@@ -1,10 +1,30 @@
-import { prismaClient as prisma } from "../server.js";
+import jwt from "jsonwebtoken";
 import opError from "../utils/classes/opError.class.js";
 
 export const lowerCaseEmail = (req, res, next) => {
     req.body.email = req.body?.email?.toLowerCase().trim() || '';
     next();
 }
+
+// verify jwt before allowing to access protected routes
+export const authenticate = (req, res, next) => {
+    const token = req.cookies.AT;
+
+    if (!token) {
+        return next(new opError('Access denied. Please login.', 401));
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+        req.user = decoded;
+        next();
+    } catch (err) {
+        if (err.name === 'TokenExpiredError') {
+            return next(new opError('Session expired. Please login again.', 401));
+        }
+        return next(new opError('Invalid token.', 401));
+    }
+};
 
 // validate sign up fields for user registration
 export const validateSignUpFields = async (req, res, next) => {

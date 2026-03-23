@@ -2,8 +2,12 @@ import express from 'express';
 import contentRouter from './routes/content.route.js';
 import GlobalErrorHandler from './middlewares/globalErr.middleware.js';
 import authRouter from './routes/auth.route.js';
+import cookieParser from 'cookie-parser';
 
 const app = express();
+
+// cookie parser
+app.use(cookieParser());
 
 // body parsers
 app.use(express.json());
