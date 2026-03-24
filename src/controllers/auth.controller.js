@@ -1,6 +1,7 @@
 import { prismaClient as prisma } from '../server.js';
 import opError from '../utils/classes/opError.class.js';
 import sendEmail from '../utils/services/email.service.js';
+import jwt from 'jsonwebtoken';
 import { 
   compareBcryptHash, 
   generateBcryptHash, 
@@ -146,4 +147,58 @@ export const login = async (req, res, next) => {
       user
     }
   });
+}
+
+export const logout = async (req, res, next) => {
+  res.clearCookie('AT', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+  });
+
+  res.clearCookie('RT', {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+  });
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Logged out successfully.'
+  });
+}
+
+// generates new access token using refresh token
+export const refresh = async (req, res, next) => {
+  const refreshToken = req.cookies.RT;
+
+  if (!refreshToken) {
+    return next(new opError('Refresh token not found. Please login.', 401));
+  }
+
+  try {
+    const decoded = jwt.verify(refreshToken, process.env.JWT_REFRESH_SECRET);
+
+    // generate new tokens
+    const { accessToken } = generateTokens({ id: decoded.id, name: decoded.name });
+
+    // set new access token in cookies
+    res.cookie('AT', accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+      maxAge: 30 * 24 * 60 * 60 * 1000,
+    });
+
+    res.status(200).json({
+      status: 'success',
+      message: 'Token refreshed successfully.'
+    });
+
+  } catch (err) {
+    if (err.name === 'TokenExpiredError') {
+      return next(new opError('Refresh token expired. Please login again.', 401));
+    }
+    return next(err);
+  }
 }

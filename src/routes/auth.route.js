@@ -3,8 +3,12 @@ import { checkRedisStatus } from '../middlewares/serviceCheck.middleware.js';
 import { checkRequiredFields } from '../middlewares/checkRequiFields.middleware.js';
 import { 
     completeUserSignUp, 
-    initUserSignUp, login } from '../controllers/auth.controller.js';
+    initUserSignUp, 
+    login, 
+    logout,
+    refresh } from '../controllers/auth.controller.js';
 import { 
+    authenticate,
     lowerCaseEmail, 
     validateLoginFields, 
     validateSignUpFields } from '../middlewares/auth.middleware.js';
@@ -44,5 +48,15 @@ router.post('/login',
     validateLoginFields,
     login
 );
+
+// Route to refresh access token
+router.post('/refresh', refresh)
+
+// authenticate for routes below
+router.use(authenticate)
+
+// Route to logout user
+router.post('/logout', logout)
+
 
 export default router;
