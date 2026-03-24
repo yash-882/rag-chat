@@ -39,6 +39,7 @@ export type Pdf_chunkMinAggregateOutputType = {
   pdf_id: string | null
   chunk_text: string | null
   chunk_index: number | null
+  user_id: string | null
 }
 
 export type Pdf_chunkMaxAggregateOutputType = {
@@ -46,6 +47,7 @@ export type Pdf_chunkMaxAggregateOutputType = {
   pdf_id: string | null
   chunk_text: string | null
   chunk_index: number | null
+  user_id: string | null
 }
 
 export type Pdf_chunkCountAggregateOutputType = {
@@ -53,6 +55,7 @@ export type Pdf_chunkCountAggregateOutputType = {
   pdf_id: number
   chunk_text: number
   chunk_index: number
+  user_id: number
   _all: number
 }
 
@@ -70,6 +73,7 @@ export type Pdf_chunkMinAggregateInputType = {
   pdf_id?: true
   chunk_text?: true
   chunk_index?: true
+  user_id?: true
 }
 
 export type Pdf_chunkMaxAggregateInputType = {
@@ -77,6 +81,7 @@ export type Pdf_chunkMaxAggregateInputType = {
   pdf_id?: true
   chunk_text?: true
   chunk_index?: true
+  user_id?: true
 }
 
 export type Pdf_chunkCountAggregateInputType = {
@@ -84,6 +89,7 @@ export type Pdf_chunkCountAggregateInputType = {
   pdf_id?: true
   chunk_text?: true
   chunk_index?: true
+  user_id?: true
   _all?: true
 }
 
@@ -178,6 +184,7 @@ export type Pdf_chunkGroupByOutputType = {
   pdf_id: string
   chunk_text: string
   chunk_index: number
+  user_id: string
   _count: Pdf_chunkCountAggregateOutputType | null
   _avg: Pdf_chunkAvgAggregateOutputType | null
   _sum: Pdf_chunkSumAggregateOutputType | null
@@ -208,6 +215,7 @@ export type pdf_chunkWhereInput = {
   pdf_id?: Prisma.UuidFilter<"pdf_chunk"> | string
   chunk_text?: Prisma.StringFilter<"pdf_chunk"> | string
   chunk_index?: Prisma.IntFilter<"pdf_chunk"> | number
+  user_id?: Prisma.UuidFilter<"pdf_chunk"> | string
   pdf?: Prisma.XOR<Prisma.PdfScalarRelationFilter, Prisma.pdfWhereInput>
 }
 
@@ -216,6 +224,7 @@ export type pdf_chunkOrderByWithRelationInput = {
   pdf_id?: Prisma.SortOrder
   chunk_text?: Prisma.SortOrder
   chunk_index?: Prisma.SortOrder
+  user_id?: Prisma.SortOrder
   pdf?: Prisma.pdfOrderByWithRelationInput
 }
 
@@ -227,6 +236,7 @@ export type pdf_chunkWhereUniqueInput = Prisma.AtLeast<{
   pdf_id?: Prisma.UuidFilter<"pdf_chunk"> | string
   chunk_text?: Prisma.StringFilter<"pdf_chunk"> | string
   chunk_index?: Prisma.IntFilter<"pdf_chunk"> | number
+  user_id?: Prisma.UuidFilter<"pdf_chunk"> | string
   pdf?: Prisma.XOR<Prisma.PdfScalarRelationFilter, Prisma.pdfWhereInput>
 }, "id">
 
@@ -235,6 +245,7 @@ export type pdf_chunkOrderByWithAggregationInput = {
   pdf_id?: Prisma.SortOrder
   chunk_text?: Prisma.SortOrder
   chunk_index?: Prisma.SortOrder
+  user_id?: Prisma.SortOrder
   _count?: Prisma.pdf_chunkCountOrderByAggregateInput
   _avg?: Prisma.pdf_chunkAvgOrderByAggregateInput
   _max?: Prisma.pdf_chunkMaxOrderByAggregateInput
@@ -250,12 +261,14 @@ export type pdf_chunkScalarWhereWithAggregatesInput = {
   pdf_id?: Prisma.UuidWithAggregatesFilter<"pdf_chunk"> | string
   chunk_text?: Prisma.StringWithAggregatesFilter<"pdf_chunk"> | string
   chunk_index?: Prisma.IntWithAggregatesFilter<"pdf_chunk"> | number
+  user_id?: Prisma.UuidWithAggregatesFilter<"pdf_chunk"> | string
 }
 
 export type pdf_chunkUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   chunk_text?: Prisma.StringFieldUpdateOperationsInput | string
   chunk_index?: Prisma.IntFieldUpdateOperationsInput | number
+  user_id?: Prisma.StringFieldUpdateOperationsInput | string
   pdf?: Prisma.pdfUpdateOneRequiredWithoutPdf_chunksNestedInput
 }
 
@@ -264,12 +277,14 @@ export type pdf_chunkUncheckedUpdateInput = {
   pdf_id?: Prisma.StringFieldUpdateOperationsInput | string
   chunk_text?: Prisma.StringFieldUpdateOperationsInput | string
   chunk_index?: Prisma.IntFieldUpdateOperationsInput | number
+  user_id?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type pdf_chunkUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   chunk_text?: Prisma.StringFieldUpdateOperationsInput | string
   chunk_index?: Prisma.IntFieldUpdateOperationsInput | number
+  user_id?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type pdf_chunkUncheckedUpdateManyInput = {
@@ -277,6 +292,7 @@ export type pdf_chunkUncheckedUpdateManyInput = {
   pdf_id?: Prisma.StringFieldUpdateOperationsInput | string
   chunk_text?: Prisma.StringFieldUpdateOperationsInput | string
   chunk_index?: Prisma.IntFieldUpdateOperationsInput | number
+  user_id?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type Pdf_chunkListRelationFilter = {
@@ -294,6 +310,7 @@ export type pdf_chunkCountOrderByAggregateInput = {
   pdf_id?: Prisma.SortOrder
   chunk_text?: Prisma.SortOrder
   chunk_index?: Prisma.SortOrder
+  user_id?: Prisma.SortOrder
 }
 
 export type pdf_chunkAvgOrderByAggregateInput = {
@@ -305,6 +322,7 @@ export type pdf_chunkMaxOrderByAggregateInput = {
   pdf_id?: Prisma.SortOrder
   chunk_text?: Prisma.SortOrder
   chunk_index?: Prisma.SortOrder
+  user_id?: Prisma.SortOrder
 }
 
 export type pdf_chunkMinOrderByAggregateInput = {
@@ -312,6 +330,7 @@ export type pdf_chunkMinOrderByAggregateInput = {
   pdf_id?: Prisma.SortOrder
   chunk_text?: Prisma.SortOrder
   chunk_index?: Prisma.SortOrder
+  user_id?: Prisma.SortOrder
 }
 
 export type pdf_chunkSumOrderByAggregateInput = {
@@ -372,24 +391,28 @@ export type pdf_chunkScalarWhereInput = {
   pdf_id?: Prisma.UuidFilter<"pdf_chunk"> | string
   chunk_text?: Prisma.StringFilter<"pdf_chunk"> | string
   chunk_index?: Prisma.IntFilter<"pdf_chunk"> | number
+  user_id?: Prisma.UuidFilter<"pdf_chunk"> | string
 }
 
 export type pdf_chunkUpdateWithoutPdfInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   chunk_text?: Prisma.StringFieldUpdateOperationsInput | string
   chunk_index?: Prisma.IntFieldUpdateOperationsInput | number
+  user_id?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type pdf_chunkUncheckedUpdateWithoutPdfInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   chunk_text?: Prisma.StringFieldUpdateOperationsInput | string
   chunk_index?: Prisma.IntFieldUpdateOperationsInput | number
+  user_id?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type pdf_chunkUncheckedUpdateManyWithoutPdfInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   chunk_text?: Prisma.StringFieldUpdateOperationsInput | string
   chunk_index?: Prisma.IntFieldUpdateOperationsInput | number
+  user_id?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 
@@ -399,6 +422,7 @@ export type pdf_chunkSelect<ExtArgs extends runtime.Types.Extensions.InternalArg
   pdf_id?: boolean
   chunk_text?: boolean
   chunk_index?: boolean
+  user_id?: boolean
   pdf?: boolean | Prisma.pdfDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["pdf_chunk"]>
 
@@ -408,6 +432,7 @@ export type pdf_chunkSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Ext
   pdf_id?: boolean
   chunk_text?: boolean
   chunk_index?: boolean
+  user_id?: boolean
   pdf?: boolean | Prisma.pdfDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["pdf_chunk"]>
 
@@ -416,9 +441,10 @@ export type pdf_chunkSelectScalar = {
   pdf_id?: boolean
   chunk_text?: boolean
   chunk_index?: boolean
+  user_id?: boolean
 }
 
-export type pdf_chunkOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "pdf_id" | "chunk_text" | "chunk_index", ExtArgs["result"]["pdf_chunk"]>
+export type pdf_chunkOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "pdf_id" | "chunk_text" | "chunk_index" | "user_id", ExtArgs["result"]["pdf_chunk"]>
 export type pdf_chunkInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   pdf?: boolean | Prisma.pdfDefaultArgs<ExtArgs>
 }
@@ -436,6 +462,7 @@ export type $pdf_chunkPayload<ExtArgs extends runtime.Types.Extensions.InternalA
     pdf_id: string
     chunk_text: string
     chunk_index: number
+    user_id: string
   }, ExtArgs["result"]["pdf_chunk"]>
   composites: {}
 }
@@ -793,6 +820,7 @@ export interface pdf_chunkFieldRefs {
   readonly pdf_id: Prisma.FieldRef<"pdf_chunk", 'String'>
   readonly chunk_text: Prisma.FieldRef<"pdf_chunk", 'String'>
   readonly chunk_index: Prisma.FieldRef<"pdf_chunk", 'Int'>
+  readonly user_id: Prisma.FieldRef<"pdf_chunk", 'String'>
 }
     
 

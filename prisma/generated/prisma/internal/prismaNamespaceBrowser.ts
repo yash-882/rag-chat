@@ -86,7 +86,8 @@ export const Pdf_chunkScalarFieldEnum = {
   id: 'id',
   pdf_id: 'pdf_id',
   chunk_text: 'chunk_text',
-  chunk_index: 'chunk_index'
+  chunk_index: 'chunk_index',
+  user_id: 'user_id'
 } as const
 
 export type Pdf_chunkScalarFieldEnum = (typeof Pdf_chunkScalarFieldEnum)[keyof typeof Pdf_chunkScalarFieldEnum]

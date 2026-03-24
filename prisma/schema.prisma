@@ -25,6 +25,7 @@ model pdf_chunk {
   chunk_text  String
   chunk_index Int
   embedding   Unsupported("vector(768)") //embedding index applied with migration files
+  user_id     String   @db.Uuid
 
   @@index([pdf_id])
 }
