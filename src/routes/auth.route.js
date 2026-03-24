@@ -2,7 +2,10 @@ import express from 'express';
 import { checkRedisStatus } from '../middlewares/serviceCheck.middleware.js';
 import { checkRequiredFields } from '../middlewares/checkRequiFields.middleware.js';
 import { 
+    changePassword,
+    completeForgotPassword,
     completeUserSignUp, 
+    initForgotPassword, 
     initUserSignUp, 
     login, 
     logout,
@@ -49,14 +52,43 @@ router.post('/login',
     login
 );
 
+// Route to initiate password reset process
+router.post('/forgot-password/init',
+    checkRequiredFields([
+        { name: 'email', type: 'string' }
+    ]),
+    lowerCaseEmail,
+    initForgotPassword
+);
+
+// Route to complete password reset process
+router.post('/forgot-password/complete',
+    checkRequiredFields([
+        { name: 'email', type: 'string' },
+        { name: 'otp', type: 'string' },
+        { name: 'newPassword', type: 'string' }
+    ]),
+    lowerCaseEmail,
+    completeForgotPassword
+);
 // Route to refresh access token
-router.post('/refresh', refresh)
+router.post('/refresh', refresh);
 
 // authenticate for routes below
-router.use(authenticate)
+router.use(authenticate);
 
 // Route to logout user
-router.post('/logout', logout)
+router.post('/logout', logout);
+
+// Route to change password using current password
+router.post('/change-password', 
+    checkRequiredFields([
+    { name: 'currentPassword', type: 'string' },
+    { name: 'newPassword', type: 'string' }
+]), 
+validateSignUpFields, 
+changePassword
+);
 
 
 export default router;

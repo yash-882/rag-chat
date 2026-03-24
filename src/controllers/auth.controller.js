@@ -6,7 +6,8 @@ import {
   compareBcryptHash, 
   generateBcryptHash, 
   generateRandomInt, 
-  limitOTPActions } from '../utils/services/auth.service.js';
+  limitOTPActions, 
+  validatePasswordLength} from '../utils/services/auth.service.js';
 import RedisService from '../utils/services/classes/redis.service.js';
 import { findUserByFilter } from '../utils/services/user.service.js';
 import { generateTokens } from '../utils/services/token.service.js';
@@ -15,6 +16,9 @@ import { generateTokens } from '../utils/services/token.service.js';
 export const initUserSignUp = async (req, res, next) => {
 
   const { name, email, password } = req.body;
+
+  // validates password length, throws error if conditions are not met
+  validatePasswordLength(password);
 
   // check if user already exists with the same email, throws err
   await findUserByFilter({email}, 'Email is already registered with us.', false, true)
@@ -202,3 +206,126 @@ export const refresh = async (req, res, next) => {
     return next(err);
   }
 }
+
+// change password
+export const changePassword = async (req, res, next) => {
+  const { currentPassword, newPassword } = req.body;
+  
+  // validates password length, throws error if not conditions dont meet
+  validatePasswordLength(newPassword);
+
+  // find user by id from authenticated request
+  const user = await findUserByFilter({ id: req.user.id }, 'User not found.', true, true);
+  
+  // verify old password
+  await compareBcryptHash(currentPassword, user.password, true, 'Current password is incorrect.');
+  
+  // check if the new password is not different
+  if(currentPassword === newPassword){
+    return next(
+      new opError('New password cannot be the same as the current password.', 400));
+  }
+  
+  // hash new password
+  const hashedNewPassword = await generateBcryptHash(newPassword, 12);
+
+  // update password in database
+  await prisma.user.update({
+    where: { id: req.user.id },
+    data: { password: hashedNewPassword },
+  });
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Password updated successfully.',
+  });
+};
+
+// initiate password reset process by requesting OTP
+export const initForgotPassword = async (req, res, next) => {
+  const { email } = req.body;
+
+  // check if user exists
+  const user = await findUserByFilter({ email }, 'Email is not registered with us.', true, true);
+
+  // generate 6 digits OTP
+  const digits = 6;
+  const otp = generateRandomInt(digits).toString();
+
+  const redis = new RedisService(email, 'FORGOT_PASSWORD_OTP');
+
+  const data = await redis.getData();
+
+  // limit OTP requests
+  limitOTPActions(data, true);
+
+  // otp data
+  const dataToStore = {
+    hashedOtp: await generateBcryptHash(otp, 10),
+    email: email,
+    requestCount: data ? data.requestCount + 1 : 1,
+    attemptCount: 0
+  };
+
+  const isUpdate = !!data;
+
+  // Store data for 10 minutes
+  await redis.setShortLivedData(dataToStore, 600, isUpdate);
+
+  // Send OTP to user's email
+  await sendEmail(email, 'Password Reset OTP', `Your OTP for resetting your password is: ${otp}.`);
+
+  console.log(otp);
+
+  res.status(200).json({
+    status: 'success',
+    message: 'OTP sent to your email. Please verify to reset your password.'
+  });
+};
+
+
+// complete password reset process by verfying using OTP
+export const completeForgotPassword = async (req, res, next) => {
+  const { email, otp, newPassword } = req.body;
+  
+  const redis = new RedisService(email, 'FORGOT_PASSWORD_OTP');
+  const data = await redis.getData();
+  
+  if (!data) {
+    return next(new opError('OTP expired or invalid session. Please request a new OTP.', 400));
+  }
+
+  // validates password length
+  validatePasswordLength(newPassword);
+
+  // limit OTP attempts
+  limitOTPActions(data, false);
+
+  const isValid = await compareBcryptHash(otp, data.hashedOtp, false);
+
+  if (!isValid) {
+    await redis.setShortLivedData({
+      ...data,
+      attemptCount: (data.attemptCount || 0) + 1
+    }, 60, true);
+
+    return next(new opError('Invalid OTP. Please try again.', 401));
+  }
+
+  // hash new password
+  const hashedNewPassword = await generateBcryptHash(newPassword, 12);
+
+  // update password in database
+  await prisma.user.update({
+    where: { email },
+    data: { password: hashedNewPassword },
+  });
+
+  // Remove the OTP data from Redis after successful password reset
+  await redis.deleteData();
+
+  res.status(200).json({
+    status: 'success',
+    message: 'Password reset successfully. You can now login with your new password.',
+  });
+};

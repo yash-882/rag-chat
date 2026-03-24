@@ -9,7 +9,8 @@ class RedisService {
     // (a unique key is generated with the combination of 'purpose' and 'uniqueID')
         this.purposes = {
             CACHE: 'cached',
-            SIGN_UP_OTP: 'sign-up-otp'
+            SIGN_UP_OTP: 'sign-up-otp',
+            FORGOT_PASSWORD_OTP: 'forgot-password-otp'
         }
         this.uniqueID = uniqueID;
         this.purpose = this.purposes[purpose] || 'unknown'

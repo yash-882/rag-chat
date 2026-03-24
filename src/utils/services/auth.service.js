@@ -45,3 +45,10 @@ export const limitOTPActions = (data, isRequestAttempt = false) => {
         );
     }
 };
+
+// validates password length
+export const validatePasswordLength = (password) => {
+    if (password.length < 8) {
+        throw new opError('Password must be at least 8 characters long', 400);
+    }
+}
