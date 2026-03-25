@@ -1,5 +1,9 @@
 import express from 'express'
-import { getAnswers, uploadFile } from '../controllers/content.controller.js'
+import { 
+    deleteMyFile, 
+    getAnswers, 
+    getMyFiles, 
+    uploadFile } from '../controllers/content.controller.js'
 import multerUploader from '../utils/services/multer.service.js'
 import { checkRequiredFields } from '../middlewares/checkRequiFields.middleware.js'
 import { authenticate } from '../middlewares/auth.middleware.js'
@@ -24,5 +28,11 @@ uploadFile)
 router.post('/get-answers', checkRequiredFields([
     { name: 'question', type: 'string' }
 ]), getAnswers)
+
+// get all uploaded contents details
+router.get('/list', getMyFiles)
+
+// delete content by ID
+router.delete('/delete/:fileId', deleteMyFile)
 
 export default router;

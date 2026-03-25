@@ -17,5 +17,4 @@ export const setCache = async (keySource, data, ttl = 300) => {
 export const deleteCache = async (keySource) => {
     const redis = new RedisService(keySource, 'CACHE');
     await redis.deleteData();
-    return data;
 }

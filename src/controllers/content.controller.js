@@ -4,7 +4,7 @@ import { getAnswersByAi, getEmbeddings } from "../utils/services/ai.service.js";
 import { cleanPdfText, getPdfChunks, getPdfHash, validatePdfResult } from "../utils/services/pdf.service.js";
 import { extractText } from "unpdf";
 import opError from "../utils/classes/opError.class.js";
-import { getCache, setCache } from "../utils/services/cache.service.js";
+import { deleteCache, getCache, setCache } from "../utils/services/cache.service.js";
 
 export const uploadFile = async (req, res, next) => {
     const file = req.file;
@@ -64,8 +64,13 @@ export const uploadFile = async (req, res, next) => {
       VALUES ${Prisma.join(values)} 
     `
   );
+
 });
-    res.status(201).json({
+  // delete the pdfs list from cache
+  await deleteCache(`user-pdfs:${req.user.id}`);
+
+  // send response
+  res.status(201).json({
         data: {
           message: 'File uploaded successfully',
           pdf: pdf,
@@ -152,4 +157,66 @@ export const getAnswers = async (req, res, next) => {
     }
   });
 
+}
+
+// user's all uploaded files details (name, created_at)
+export const getMyFiles = async (req, res, next) => {
+
+  // cache layer
+  const keySource = `user-pdfs:${req.user.id}`;
+  const cachedPdfs = await getCache(keySource);
+
+  // return cached data
+  if (cachedPdfs) {
+    return res.status(200).json({
+      data: {
+        content: cachedPdfs,
+        isCached: true
+      }
+    });
+  }
+
+  // query DB
+  const pdfs = await prismaClient.pdf.findMany({
+    where: {
+      user_id: req.user.id
+    },
+    select: {
+      id: true,
+      file_name: true,
+      created_at: true
+    }
+  });
+
+  // store in cache
+  await setCache(keySource, pdfs, 600);
+
+  // send response
+  res.status(200).json({
+    data: {
+      content: pdfs,
+      isCached: false
+    }
+  });
+}
+
+// delete user's file
+export const deleteMyFile = async (req, res, next) => {
+  const { fileId } = req.params;
+
+  // delete file
+  await prismaClient.pdf.delete({
+    where: {
+      id: fileId
+    }
+  });
+
+  // delete from cache too
+  await deleteCache(`user-pdfs:${req.user.id}`);
+
+  // send response
+  res.status(200).json({
+    status: 'success',
+    message: 'File deleted successfully.'
+  });
 }
