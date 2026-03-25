@@ -29,6 +29,7 @@ export type PdfMinAggregateOutputType = {
   file_name: string | null
   created_at: Date | null
   user_id: string | null
+  file_hash: string | null
 }
 
 export type PdfMaxAggregateOutputType = {
@@ -36,6 +37,7 @@ export type PdfMaxAggregateOutputType = {
   file_name: string | null
   created_at: Date | null
   user_id: string | null
+  file_hash: string | null
 }
 
 export type PdfCountAggregateOutputType = {
@@ -43,6 +45,7 @@ export type PdfCountAggregateOutputType = {
   file_name: number
   created_at: number
   user_id: number
+  file_hash: number
   _all: number
 }
 
@@ -52,6 +55,7 @@ export type PdfMinAggregateInputType = {
   file_name?: true
   created_at?: true
   user_id?: true
+  file_hash?: true
 }
 
 export type PdfMaxAggregateInputType = {
@@ -59,6 +63,7 @@ export type PdfMaxAggregateInputType = {
   file_name?: true
   created_at?: true
   user_id?: true
+  file_hash?: true
 }
 
 export type PdfCountAggregateInputType = {
@@ -66,6 +71,7 @@ export type PdfCountAggregateInputType = {
   file_name?: true
   created_at?: true
   user_id?: true
+  file_hash?: true
   _all?: true
 }
 
@@ -146,6 +152,7 @@ export type PdfGroupByOutputType = {
   file_name: string
   created_at: Date
   user_id: string
+  file_hash: string
   _count: PdfCountAggregateOutputType | null
   _min: PdfMinAggregateOutputType | null
   _max: PdfMaxAggregateOutputType | null
@@ -174,6 +181,7 @@ export type pdfWhereInput = {
   file_name?: Prisma.StringFilter<"pdf"> | string
   created_at?: Prisma.DateTimeFilter<"pdf"> | Date | string
   user_id?: Prisma.UuidFilter<"pdf"> | string
+  file_hash?: Prisma.StringFilter<"pdf"> | string
   pdf_chunks?: Prisma.Pdf_chunkListRelationFilter
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.userWhereInput>
 }
@@ -183,6 +191,7 @@ export type pdfOrderByWithRelationInput = {
   file_name?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
   user_id?: Prisma.SortOrder
+  file_hash?: Prisma.SortOrder
   pdf_chunks?: Prisma.pdf_chunkOrderByRelationAggregateInput
   user?: Prisma.userOrderByWithRelationInput
 }
@@ -195,6 +204,7 @@ export type pdfWhereUniqueInput = Prisma.AtLeast<{
   file_name?: Prisma.StringFilter<"pdf"> | string
   created_at?: Prisma.DateTimeFilter<"pdf"> | Date | string
   user_id?: Prisma.UuidFilter<"pdf"> | string
+  file_hash?: Prisma.StringFilter<"pdf"> | string
   pdf_chunks?: Prisma.Pdf_chunkListRelationFilter
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.userWhereInput>
 }, "id">
@@ -204,6 +214,7 @@ export type pdfOrderByWithAggregationInput = {
   file_name?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
   user_id?: Prisma.SortOrder
+  file_hash?: Prisma.SortOrder
   _count?: Prisma.pdfCountOrderByAggregateInput
   _max?: Prisma.pdfMaxOrderByAggregateInput
   _min?: Prisma.pdfMinOrderByAggregateInput
@@ -217,12 +228,14 @@ export type pdfScalarWhereWithAggregatesInput = {
   file_name?: Prisma.StringWithAggregatesFilter<"pdf"> | string
   created_at?: Prisma.DateTimeWithAggregatesFilter<"pdf"> | Date | string
   user_id?: Prisma.UuidWithAggregatesFilter<"pdf"> | string
+  file_hash?: Prisma.StringWithAggregatesFilter<"pdf"> | string
 }
 
 export type pdfCreateInput = {
   id?: string
   file_name: string
   created_at?: Date | string
+  file_hash: string
   pdf_chunks?: Prisma.pdf_chunkCreateNestedManyWithoutPdfInput
   user: Prisma.userCreateNestedOneWithoutPdfsInput
 }
@@ -232,6 +245,7 @@ export type pdfUncheckedCreateInput = {
   file_name: string
   created_at?: Date | string
   user_id: string
+  file_hash: string
   pdf_chunks?: Prisma.pdf_chunkUncheckedCreateNestedManyWithoutPdfInput
 }
 
@@ -239,6 +253,7 @@ export type pdfUpdateInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   file_name?: Prisma.StringFieldUpdateOperationsInput | string
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  file_hash?: Prisma.StringFieldUpdateOperationsInput | string
   pdf_chunks?: Prisma.pdf_chunkUpdateManyWithoutPdfNestedInput
   user?: Prisma.userUpdateOneRequiredWithoutPdfsNestedInput
 }
@@ -248,6 +263,7 @@ export type pdfUncheckedUpdateInput = {
   file_name?: Prisma.StringFieldUpdateOperationsInput | string
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user_id?: Prisma.StringFieldUpdateOperationsInput | string
+  file_hash?: Prisma.StringFieldUpdateOperationsInput | string
   pdf_chunks?: Prisma.pdf_chunkUncheckedUpdateManyWithoutPdfNestedInput
 }
 
@@ -256,12 +272,14 @@ export type pdfCreateManyInput = {
   file_name: string
   created_at?: Date | string
   user_id: string
+  file_hash: string
 }
 
 export type pdfUpdateManyMutationInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   file_name?: Prisma.StringFieldUpdateOperationsInput | string
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  file_hash?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type pdfUncheckedUpdateManyInput = {
@@ -269,6 +287,7 @@ export type pdfUncheckedUpdateManyInput = {
   file_name?: Prisma.StringFieldUpdateOperationsInput | string
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user_id?: Prisma.StringFieldUpdateOperationsInput | string
+  file_hash?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type pdfCountOrderByAggregateInput = {
@@ -276,6 +295,7 @@ export type pdfCountOrderByAggregateInput = {
   file_name?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
   user_id?: Prisma.SortOrder
+  file_hash?: Prisma.SortOrder
 }
 
 export type pdfMaxOrderByAggregateInput = {
@@ -283,6 +303,7 @@ export type pdfMaxOrderByAggregateInput = {
   file_name?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
   user_id?: Prisma.SortOrder
+  file_hash?: Prisma.SortOrder
 }
 
 export type pdfMinOrderByAggregateInput = {
@@ -290,6 +311,7 @@ export type pdfMinOrderByAggregateInput = {
   file_name?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
   user_id?: Prisma.SortOrder
+  file_hash?: Prisma.SortOrder
 }
 
 export type PdfScalarRelationFilter = {
@@ -369,6 +391,7 @@ export type pdfCreateWithoutPdf_chunksInput = {
   id?: string
   file_name: string
   created_at?: Date | string
+  file_hash: string
   user: Prisma.userCreateNestedOneWithoutPdfsInput
 }
 
@@ -377,6 +400,7 @@ export type pdfUncheckedCreateWithoutPdf_chunksInput = {
   file_name: string
   created_at?: Date | string
   user_id: string
+  file_hash: string
 }
 
 export type pdfCreateOrConnectWithoutPdf_chunksInput = {
@@ -399,6 +423,7 @@ export type pdfUpdateWithoutPdf_chunksInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   file_name?: Prisma.StringFieldUpdateOperationsInput | string
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  file_hash?: Prisma.StringFieldUpdateOperationsInput | string
   user?: Prisma.userUpdateOneRequiredWithoutPdfsNestedInput
 }
 
@@ -407,12 +432,14 @@ export type pdfUncheckedUpdateWithoutPdf_chunksInput = {
   file_name?: Prisma.StringFieldUpdateOperationsInput | string
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user_id?: Prisma.StringFieldUpdateOperationsInput | string
+  file_hash?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 export type pdfCreateWithoutUserInput = {
   id?: string
   file_name: string
   created_at?: Date | string
+  file_hash: string
   pdf_chunks?: Prisma.pdf_chunkCreateNestedManyWithoutPdfInput
 }
 
@@ -420,6 +447,7 @@ export type pdfUncheckedCreateWithoutUserInput = {
   id?: string
   file_name: string
   created_at?: Date | string
+  file_hash: string
   pdf_chunks?: Prisma.pdf_chunkUncheckedCreateNestedManyWithoutPdfInput
 }
 
@@ -457,18 +485,21 @@ export type pdfScalarWhereInput = {
   file_name?: Prisma.StringFilter<"pdf"> | string
   created_at?: Prisma.DateTimeFilter<"pdf"> | Date | string
   user_id?: Prisma.UuidFilter<"pdf"> | string
+  file_hash?: Prisma.StringFilter<"pdf"> | string
 }
 
 export type pdfCreateManyUserInput = {
   id?: string
   file_name: string
   created_at?: Date | string
+  file_hash: string
 }
 
 export type pdfUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   file_name?: Prisma.StringFieldUpdateOperationsInput | string
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  file_hash?: Prisma.StringFieldUpdateOperationsInput | string
   pdf_chunks?: Prisma.pdf_chunkUpdateManyWithoutPdfNestedInput
 }
 
@@ -476,6 +507,7 @@ export type pdfUncheckedUpdateWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   file_name?: Prisma.StringFieldUpdateOperationsInput | string
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  file_hash?: Prisma.StringFieldUpdateOperationsInput | string
   pdf_chunks?: Prisma.pdf_chunkUncheckedUpdateManyWithoutPdfNestedInput
 }
 
@@ -483,6 +515,7 @@ export type pdfUncheckedUpdateManyWithoutUserInput = {
   id?: Prisma.StringFieldUpdateOperationsInput | string
   file_name?: Prisma.StringFieldUpdateOperationsInput | string
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  file_hash?: Prisma.StringFieldUpdateOperationsInput | string
 }
 
 
@@ -521,6 +554,7 @@ export type pdfSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = ru
   file_name?: boolean
   created_at?: boolean
   user_id?: boolean
+  file_hash?: boolean
   pdf_chunks?: boolean | Prisma.pdf$pdf_chunksArgs<ExtArgs>
   user?: boolean | Prisma.userDefaultArgs<ExtArgs>
   _count?: boolean | Prisma.PdfCountOutputTypeDefaultArgs<ExtArgs>
@@ -531,6 +565,7 @@ export type pdfSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extension
   file_name?: boolean
   created_at?: boolean
   user_id?: boolean
+  file_hash?: boolean
   user?: boolean | Prisma.userDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["pdf"]>
 
@@ -539,6 +574,7 @@ export type pdfSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extension
   file_name?: boolean
   created_at?: boolean
   user_id?: boolean
+  file_hash?: boolean
   user?: boolean | Prisma.userDefaultArgs<ExtArgs>
 }, ExtArgs["result"]["pdf"]>
 
@@ -547,9 +583,10 @@ export type pdfSelectScalar = {
   file_name?: boolean
   created_at?: boolean
   user_id?: boolean
+  file_hash?: boolean
 }
 
-export type pdfOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "file_name" | "created_at" | "user_id", ExtArgs["result"]["pdf"]>
+export type pdfOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "file_name" | "created_at" | "user_id" | "file_hash", ExtArgs["result"]["pdf"]>
 export type pdfInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   pdf_chunks?: boolean | Prisma.pdf$pdf_chunksArgs<ExtArgs>
   user?: boolean | Prisma.userDefaultArgs<ExtArgs>
@@ -573,6 +610,7 @@ export type $pdfPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs = 
     file_name: string
     created_at: Date
     user_id: string
+    file_hash: string
   }, ExtArgs["result"]["pdf"]>
   composites: {}
 }
@@ -1002,6 +1040,7 @@ export interface pdfFieldRefs {
   readonly file_name: Prisma.FieldRef<"pdf", 'String'>
   readonly created_at: Prisma.FieldRef<"pdf", 'DateTime'>
   readonly user_id: Prisma.FieldRef<"pdf", 'String'>
+  readonly file_hash: Prisma.FieldRef<"pdf", 'String'>
 }
     
 
