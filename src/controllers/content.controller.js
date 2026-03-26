@@ -20,7 +20,7 @@ export const uploadFile = async (req, res, next) => {
     // Note: (smaller chunks -> more api calls for embeddings + more rows are created + weaker context per chunk)
     
     // get chunks 
-  const chunks = getPdfChunks(cleanText, 20, 800) // returns an array of chunks 
+    const chunks = getPdfChunks(cleanText, 20, 800) // returns an array of chunks
 
   // get embeddings from AI 
   const embeddings = await getEmbeddings(chunks)

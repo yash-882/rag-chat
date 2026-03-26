@@ -4,6 +4,13 @@ import opError from "../classes/opError.class.js";
 
 // generate embeddings
 export const getEmbeddings = async (textArr) => {
+
+    // GoogleGenAi limits 100 chunks per request
+    if(textArr.length > 100){
+        throw new opError(
+            'Text is too long to process. Please try again with a smaller file.', 400);
+    }
+
     const response = await googleGenAI.models.embedContent({
         model: 'gemini-embedding-001',
         contents: textArr,
