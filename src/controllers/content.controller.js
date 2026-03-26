@@ -200,7 +200,8 @@ export const deleteMyFile = async (req, res, next) => {
   // delete file
   await prismaClient.pdf.delete({
     where: {
-      id: fileId
+      id: fileId,
+      user_id: req.user.id
     }
   });
 
