@@ -2,6 +2,7 @@ import express from 'express'
 import { 
     deleteMyFile, 
     getAnswers, 
+    getAnswersStream, 
     getMyFiles, 
     uploadFile } from '../controllers/content.controller.js'
 import multerUploader from '../utils/services/multer.service.js'
@@ -28,6 +29,11 @@ uploadFile)
 router.post('/get-answers', checkRequiredFields([
     { name: 'question', type: 'string' }
 ]), getAnswers)
+
+// get answers in stream of uploade4d contents
+router.post('/get-answers-stream', checkRequiredFields([
+    { name: 'question', type: 'string' }
+]), getAnswersStream)
 
 // get all uploaded contents details
 router.get('/list', getMyFiles)

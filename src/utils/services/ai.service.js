@@ -26,19 +26,12 @@ export const getEmbeddings = async (textArr) => {
     return response.embeddings;
 }
 
-// generate text-based answers
-export const getAnswersByAi = async ({context, question}) => {
-    // GENERATE ANSWER USING LLM
-    const response = await openai.chat.completions.create({
-        model: "llama-3.1-8b-instant",
-        messages: [
-            {
-                role: "system",
-                content: `
+// build the system prompt (shared between streaming and non-streaming)
+const buildSystemPrompt = (context) => `
 You are an assistant answering a user's question using information derived from provided context.
 Context:
 ${context}
-
+ 
 Rules:
 - Respond naturally and directly to the user.
 - Use the context as the source of truth for factual information.
@@ -47,7 +40,17 @@ Rules:
 - If the answer cannot be determined from the context, say so clearly.
 - For advice or opinion questions, provide general guidance without making unsupported or specific claims.
 - Be concise and clear.
-`
+`;
+
+// generate text-based answers
+export const getAnswersByAi = async ({context, question}) => {
+    // GENERATE ANSWER USING LLM
+    const response = await openai.chat.completions.create({
+        model: "llama-3.1-8b-instant",
+        messages: [
+            {
+                role: "system",
+                content: buildSystemPrompt(context)
             },
             {
                 role: "user",
@@ -66,3 +69,28 @@ Rules:
     return answer;
 
 }  
+// streaming version — yields chunks as they arrive from Groq
+// the controller is responsible for writing SSE events to res
+export const getAnswersByAiStream = async ({ context, question, onChunk, onDone }) => {
+    const stream = await openai.chat.completions.create({
+        model: "llama-3.1-8b-instant",
+        messages: [
+            { role: "system", content: buildSystemPrompt(context) },
+            { role: "user", content: question }
+        ],
+        temperature: 0,
+        stream: true  // this is the only difference
+    });
+ 
+    let fullAnswer = "";
+ 
+    for await (const chunk of stream) {
+        const token = chunk.choices[0]?.delta?.content || "";
+        if (token) {
+            fullAnswer += token;
+            onChunk(token); // controller writes this token to SSE
+        }
+    }
+ 
+    onDone(fullAnswer); // controller uses full answer to save to cache etc.
+}

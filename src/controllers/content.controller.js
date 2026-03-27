@@ -1,6 +1,6 @@
 import { Prisma } from "../../prisma/generated/prisma/client.ts";
 import { prismaClient } from "../server.js"
-import { getAnswersByAi, getEmbeddings } from "../utils/services/ai.service.js";
+import { getAnswersByAi, getAnswersByAiStream, getEmbeddings } from "../utils/services/ai.service.js";
 import { cleanPdfText, getPdfChunks, getPdfHash, validatePdfResult } from "../utils/services/pdf.service.js";
 import { extractText } from "unpdf";
 import { deleteCache, getCache, setCache } from "../utils/services/cache.service.js";
@@ -213,4 +213,103 @@ export const deleteMyFile = async (req, res, next) => {
     status: 'success',
     message: 'File deleted successfully.'
   });
+}
+
+export const getAnswersStream = async (req, res, next) => {
+  const { question } = req.body || {};
+
+  // headers for stream
+  res.setHeader('Connection', 'keep-alive') // tells to keep the connection open
+  res.setHeader('Cache-Control', 'no-cache') // tells not to cache any response
+  res.setHeader('Content-Type', 'text/event-stream') // tells the content type is SSE (server-side event)
+
+  res.flushHeaders() // flush immediately so the client knows the connection is still open
+
+ // helper to write an SSE event
+  // SSE format is strictly: "data: <payload>\n\n"
+  const sendEvent = (eventType, payload) => {
+    res.write(`data: ${JSON.stringify({ type: eventType, ...payload })}\n\n`);
+  };
+ 
+  try {
+    // get embedding of question
+    const embeddingDetails = await getEmbeddings([question]);
+ 
+    // vector search
+    const results = await prismaClient.$queryRaw(
+      Prisma.sql`
+        SELECT pdf_id, chunk_text, 1 - (
+          embedding <=> ${JSON.stringify(embeddingDetails[0].values)}::vector
+        ) AS similarity
+        FROM pdf_chunk
+        WHERE user_id = ${req.user.id}::uuid
+        ORDER BY similarity DESC
+        LIMIT 5
+      `
+    );
+ 
+    // no relevant context found
+    if (results.length === 0 || parseFloat(results[0].similarity) < 0.5) {
+      sendEvent("done", { token: "No relevant information found across your uploaded documents." });
+      res.end();
+      return;
+    }
+ 
+    // check cache before streaming
+    // if cached — stream the cached answer token by token
+    const pdfIds = [...new Set(results.map((r) => r.pdf_id))];
+    const keySource = `${question}:${pdfIds.join()}:${req.user.id}`;
+    const cached = await getCache(keySource);
+  
+    if (cached && cached.answer) {
+      // simulate streaming from cache — split by word and send
+      const words = cached.answer.split(" ");
+      for (const word of words) {
+        sendEvent("chunk", { token: word + " " });
+      }
+      sendEvent("done", { sources: cached.sources, isCached: true });
+      res.end();
+      return;
+    }
+ 
+    // get sources
+    const sources = await prismaClient.pdf.findMany({
+      where: {
+        id: { in: pdfIds },
+        user_id: req.user.id,
+      },
+      select: { id: true, file_name: true },
+    });
+ 
+    // clean context
+    const context = results.map((r) => r.chunk_text).join("\n\n");
+ 
+    // stream answer from LLM
+    await getAnswersByAiStream({
+      context,
+      question,
+ 
+      // called for every token — write to SSE immediately
+      onChunk: (token) => {
+        sendEvent("chunk", { token });
+      },
+ 
+      // called when stream is fully done
+      onDone: async (fullAnswer) => {
+        // save to cache
+        await setCache(keySource, { answer: fullAnswer, sources }, 600);
+ 
+        // send final event with sources
+        sendEvent("done", { sources, isCached: false });
+        res.end();
+      },
+    });
+ 
+  } catch (err) {
+    // SSE connections can't use normal error middleware
+    // so we send the error as an SSE event and close
+    sendEvent("error", { message: err.message || "Something went wrong." });
+    res.end();
+  }
+
 }
