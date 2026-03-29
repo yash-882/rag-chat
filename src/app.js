@@ -4,6 +4,7 @@ import GlobalErrorHandler from './middlewares/globalErr.middleware.js';
 import authRouter from './routes/auth.route.js';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
+import conversationRouter from './routes/conversation.route.js';
 
 const app = express();
 
@@ -23,6 +24,7 @@ app.use(express.urlencoded({ extended: true }));
 // routes
 app.use('/api/content', contentRouter)
 app.use('/api/auth', authRouter)
+app.use('/api/conversation', conversationRouter)
 
 // health check route
 app.use('/api/health-check', (req, res) => {

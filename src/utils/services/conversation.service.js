@@ -34,20 +34,3 @@ export const saveMessage = async (conversationId, message, role) => {
     },
   });
 };
-
-// get conversation history
-export const getConversationHistory = async (conversationId, userId) => {
-  return await prisma.conversation.findUnique({
-    where: {
-      id: conversationId,
-      user_id: userId,
-    },
-    include: {
-      messages: {
-        orderBy: {
-          created_at: 'asc',
-        },
-      },
-    },
-  });
-};
