@@ -44,7 +44,7 @@ model user {
 model conversation {
   id String @id @default(uuid()) @db.Uuid
   user_id String @db.Uuid
-  created_at DateTime @default(now())
+  created_at DateTime @default(now()) 
   messages message[]
 }
 
@@ -59,4 +59,5 @@ model message {
   content String
   conversation conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
   role Role
+  created_at DateTime @default(now())
 }
