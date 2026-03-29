@@ -24,6 +24,15 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/content', contentRouter)
 app.use('/api/auth', authRouter)
 
+// health check route
+app.use('/api/health-check', (req, res) => {
+    res.status(200).json({
+        status: 'success',
+        message: 'Server is up and running.'
+    })
+})
+
+
 // not found middleware
 app.use((req, res, next) => {
     res.status(404).json({
