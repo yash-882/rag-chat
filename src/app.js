@@ -5,6 +5,7 @@ import authRouter from './routes/auth.route.js';
 import cookieParser from 'cookie-parser';
 import cors from 'cors';
 import conversationRouter from './routes/conversation.route.js';
+import userRouter from './routes/user.route.js';
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use('/api/content', contentRouter)
 app.use('/api/auth', authRouter)
 app.use('/api/conversation', conversationRouter)
+app.use('/api/user', userRouter)
 
 // health check route
 app.use('/api/health-check', (req, res) => {
