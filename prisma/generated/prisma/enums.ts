@@ -15,3 +15,11 @@ export const Role = {
 } as const
 
 export type Role = (typeof Role)[keyof typeof Role]
+
+
+export const MessageType = {
+  NO_RESULT: 'NO_RESULT',
+  SUCCESS: 'SUCCESS'
+} as const
+
+export type MessageType = (typeof MessageType)[keyof typeof MessageType]

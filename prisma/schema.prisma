@@ -53,8 +53,14 @@ enum Role {
   ASSISTANT
 }
 
+enum MessageType {
+  NO_RESULT
+  SUCCESS
+}
+
 model message {
   id String @id @default(uuid()) @db.Uuid
+  type MessageType @default(SUCCESS)
   conversation_id String @db.Uuid
   content String
   conversation conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
