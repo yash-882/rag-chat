@@ -815,8 +815,7 @@ export type PdfScalarFieldEnum = (typeof PdfScalarFieldEnum)[keyof typeof PdfSca
 export const Pdf_chunkScalarFieldEnum = {
   id: 'id',
   pdf_id: 'pdf_id',
-  chunk_text: 'chunk_text',
-  user_id: 'user_id'
+  chunk_text: 'chunk_text'
 } as const
 
 export type Pdf_chunkScalarFieldEnum = (typeof Pdf_chunkScalarFieldEnum)[keyof typeof Pdf_chunkScalarFieldEnum]
@@ -844,12 +843,12 @@ export type ConversationScalarFieldEnum = (typeof ConversationScalarFieldEnum)[k
 
 export const MessageScalarFieldEnum = {
   id: 'id',
-  seq: 'seq',
-  type: 'type',
   conversation_id: 'conversation_id',
   content: 'content',
   role: 'role',
-  created_at: 'created_at'
+  created_at: 'created_at',
+  type: 'type',
+  seq: 'seq'
 } as const
 
 export type MessageScalarFieldEnum = (typeof MessageScalarFieldEnum)[keyof typeof MessageScalarFieldEnum]
@@ -906,16 +905,16 @@ export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaM
 
 
 /**
- * Reference to a field of type 'Int'
+ * Reference to a field of type 'Role'
  */
-export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
+export type EnumRoleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Role'>
     
 
 
 /**
- * Reference to a field of type 'Int[]'
+ * Reference to a field of type 'Role[]'
  */
-export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
+export type ListEnumRoleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Role[]'>
     
 
 
@@ -934,16 +933,16 @@ export type ListEnumMessageTypeFieldRefInput<$PrismaModel> = FieldRefInputType<$
 
 
 /**
- * Reference to a field of type 'Role'
+ * Reference to a field of type 'Int'
  */
-export type EnumRoleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Role'>
+export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int'>
     
 
 
 /**
- * Reference to a field of type 'Role[]'
+ * Reference to a field of type 'Int[]'
  */
-export type ListEnumRoleFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Role[]'>
+export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
     
 
 

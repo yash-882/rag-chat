@@ -48,7 +48,6 @@ export const uploadFile = async (req, res, next) => {
       ${pdf.id}::uuid, -- pdf id
       ${req.user.id}::uuid, -- makes sure the user can only query their own data
       ${chunk}, -- chunk text
-      ${index}, -- chunk index
       ${vec}::vector -- embedding
     )`;
     });
@@ -56,7 +55,7 @@ export const uploadFile = async (req, res, next) => {
     // insert all pdf chunks
     await tx.$queryRaw(
       Prisma.sql`
-      INSERT INTO pdf_chunk (id, pdf_id, user_id, chunk_text, chunk_index, embedding)
+      INSERT INTO pdf_chunk (id, pdf_id, user_id, chunk_text, embedding)
       -- output values: ( id, pdf_id, user_id, chunk_text, chunk_index, embedding ), and so on..
       VALUES ${Prisma.join(values)} 
     `

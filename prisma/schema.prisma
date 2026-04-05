@@ -11,33 +11,34 @@ model pdf {
   id         String      @id @default(uuid()) @db.Uuid
   file_name  String      @db.VarChar(100)
   created_at DateTime    @default(now())
-  pdf_chunks pdf_chunk[]
   user_id    String      @db.Uuid
+  file_hash  String      @unique @db.VarChar(100)
   user       user        @relation(fields: [user_id], references: [id], onDelete: Cascade)
-  file_hash  String      @db.VarChar(100)
+  pdf_chunks pdf_chunk[]
 
-  @@index([user_id]) // for querying user's all pdfs
-  @@index([id, user_id]) // for querying user's specific pdfs
+  // for querying user's pdfs
+  @@index([user_id])
 }
 
 model pdf_chunk {
-  id          String                     @id @default(uuid()) @db.Uuid
-  pdf_id      String                     @db.Uuid
-  pdf         pdf                        @relation(fields: [pdf_id], references: [id], onDelete: Cascade)
-  chunk_text  String
-  embedding   Unsupported("vector(768)") //embedding index applied with migration files
-  user_id     String                     @db.Uuid
+  id         String                @id @default(uuid()) @db.Uuid
+  pdf_id     String                @db.Uuid
+  chunk_text String
+  embedding  Unsupported("vector")
+  pdf        pdf                   @relation(fields: [pdf_id], references: [id], onDelete: Cascade)
 
-  @@index([user_id]) // for querying user's pdf's chunks
+  // used for JOIN query
+  @@index([pdf_id])
 }
 
 model user {
-  id         String   @id @default(uuid()) @db.Uuid
-  email      String   @unique @db.VarChar(255)
-  password   String   @db.VarChar(70)
-  name       String   @default("default_name") @db.VarChar(50)
-  created_at DateTime @default(now())
-  pdfs       pdf[]
+  id            String         @id @default(uuid()) @db.Uuid
+  email         String         @unique @db.VarChar(255)
+  password      String         @db.VarChar(70)
+  name          String         @default("default_name") @db.VarChar(50)
+  created_at    DateTime       @default(now())
+  pdfs          pdf[]
+  conversations conversation[]
 }
 
 model conversation {
@@ -45,6 +46,24 @@ model conversation {
   user_id    String    @db.Uuid
   created_at DateTime  @default(now())
   messages   message[]
+  user user @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  // for conversations query in descending order (latest to oldest)
+  @@index([user_id, created_at(sort: Desc)])
+}
+
+model message {
+  id              String       @id @default(uuid()) @db.Uuid
+  conversation_id String       @db.Uuid
+  content         String
+  role            Role
+  created_at      DateTime     @default(now())
+  type            MessageType  @default(SUCCESS)
+  seq             Int          @default(autoincrement())
+  conversation    conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+
+  // for messages query in descending order (latest to oldest)
+  @@index([conversation_id, created_at(sort: Desc), seq(sort: Desc)])
 }
 
 enum Role {
@@ -55,18 +74,4 @@ enum Role {
 enum MessageType {
   NO_RESULT
   SUCCESS
-}
-
-model message {
-  id              String       @id @default(uuid()) @db.Uuid
-  seq             Int          @default(autoincrement()) // helps as a tiebreaker for message queries
-  type            MessageType  @default(SUCCESS)
-  conversation_id String       @db.Uuid
-  content         String
-  conversation    conversation @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
-  role            Role 
-  created_at      DateTime     @default(now())
-
-  @@index([conversation_id]) // for querying conversation's messages
-  @@index([created_at(sort: Desc), seq(sort: Desc)]) // for cursor based pagination on messages
 }
