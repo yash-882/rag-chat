@@ -1,4 +1,4 @@
-import { prismaClient } from "../server.js";
+import prisma from "../configs/prisma.config.js";
 import opError from "../utils/classes/opError.class.js";
 import { getPdfHash } from "../utils/services/pdf.service.js";
 
@@ -6,7 +6,7 @@ export const fileUploadRequirement = async (req, res, next) => {
   const fileHash = getPdfHash(req.file?.buffer);
 
   // get all uploaded files
-  const files = await prismaClient.pdf.findMany({
+  const files = await prisma.pdf.findMany({
     where: {
       user_id: req.user.id
     },

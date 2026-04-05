@@ -1,7 +1,6 @@
 import { createHash } from 'crypto'
 import redisClient from '../../../configs/redis.config.js';
 
-
 // Redis operations
 class RedisService {
     constructor(uniqueID, purpose){

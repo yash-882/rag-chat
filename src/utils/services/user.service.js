@@ -1,5 +1,5 @@
+import prisma from '../../configs/prisma.config.js';
 import opError from '../classes/opError.class.js';
-import { prismaClient as prisma } from '../../server.js';
 
 export const findUserByFilter = async (
     filter, message = 'User not found.',

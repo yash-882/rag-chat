@@ -23,6 +23,7 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// query string parser
 app.set('query parser', (str) => {
     return QueryString.parse(str);
 });

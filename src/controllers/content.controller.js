@@ -1,10 +1,10 @@
 import { Prisma } from "../../prisma/generated/prisma/client.ts";
-import { prismaClient } from "../server.js"
 import { getAnswersByAi, getAnswersByAiStream, getEmbeddings } from "../utils/services/ai.service.js";
 import { cleanPdfText, getPdfChunks, getPdfHash, validatePdfResult } from "../utils/services/pdf.service.js";
 import { extractText } from "unpdf";
 import { deleteCache, getCache, setCache } from "../utils/services/cache.service.js";
 import { getOrCreateConversation, saveMessage } from "../utils/services/conversation.service.js";
+import prismaClient from "../configs/prisma.config.js";
 
 export const uploadFile = async (req, res, next) => {
   const file = req.file;

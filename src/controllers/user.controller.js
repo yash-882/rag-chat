@@ -1,4 +1,4 @@
-import { prismaClient as prisma } from "../server.js";
+import prisma from "../configs/prisma.config.js";
 import opError from "../utils/classes/opError.class.js";
 import { compareBcryptHash } from "../utils/services/auth.service.js";
 import { findUserByFilter } from "../utils/services/user.service.js";

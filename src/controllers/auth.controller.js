@@ -1,4 +1,3 @@
-import { prismaClient as prisma } from '../server.js';
 import opError from '../utils/classes/opError.class.js';
 import sendEmail from '../utils/services/email.service.js';
 import jwt from 'jsonwebtoken';
@@ -11,6 +10,7 @@ import {
 import RedisService from '../utils/services/classes/redis.service.js';
 import { findUserByFilter } from '../utils/services/user.service.js';
 import { generateTokens } from '../utils/services/token.service.js';
+import prisma from '../configs/prisma.config.js';
 
 // create user
 export const initUserSignUp = async (req, res, next) => {

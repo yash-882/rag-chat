@@ -1,7 +1,7 @@
 import opError from "../utils/classes/opError.class.js";
-import { prismaClient as prisma } from "../server.js";
 import { parseMessageCursor } from "../utils/services/conversation.service.js";
 import { getCache, setCache } from "../utils/services/cache.service.js";
+import prisma from "../configs/prisma.config.js";
 
 // get all messages for a specific conversation
 export const getMessages = async (req, res, next) => {

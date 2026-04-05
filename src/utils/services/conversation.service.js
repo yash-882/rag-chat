@@ -1,6 +1,8 @@
-// conversation service
-import { prismaClient as prisma } from '../../server.js';
+import prisma from "../../configs/prisma.config.js";
 
+// conversation service
+
+// get or initiate conversation
 export const getOrCreateConversation = async (userId, conversationId) => {
   let conversation = null;
 

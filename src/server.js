@@ -1,10 +1,17 @@
+// handle uncaught exceptions
+process.on('uncaughtException', (err) => {
+    console.log('UNCAUGHT EXCEPTION! Shutting down...');
+    console.log(err.name, err.message);
+    process.exit(1);
+});
+
 //load enviroment variables
 import "../loadEnvVars.js";
 
 import app from "./app.js";
-import { PrismaClient } from '../prisma/generated/prisma/client.ts';
-import { PrismaPg } from '@prisma/adapter-pg';
 import redisClient from "./configs/redis.config.js";
+import prismaClient from "./configs/prisma.config.js";
+
 
 let isRedisAlive = true;
 const PORT = process.env.PORT || 3000;
@@ -15,14 +22,6 @@ redisClient.on('error', (err) => {
     
     isRedisAlive = false;
 });
-
-// prisma DB config (postgresql)
-const prismaClient = new PrismaClient({
-    adapter: new PrismaPg({
-        connectionString: process.env.DATABASE_URL
-    })
-})
-
 
 async function startServer() {
     
@@ -54,6 +53,6 @@ async function startServer() {
         }
     }
 }
-const serverResult = await startServer();
-const redis = serverResult ? serverResult.redisClient : null;
-export {redis, prismaClient, isRedisAlive}
+await startServer();
+
+export { isRedisAlive }
