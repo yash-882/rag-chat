@@ -1,6 +1,6 @@
 import { Prisma } from "../../prisma/generated/prisma/client.ts";
 import { getAnswersByAi, getAnswersByAiStream, getEmbeddings } from "../utils/services/ai.service.js";
-import { cleanPdfText, getPdfChunks, getPdfHash, validatePdfResult } from "../utils/services/pdf.service.js";
+import { cleanPdfText, getPdfChunks, getPdfHash, getPdfSources, validatePdfResult } from "../utils/services/pdf.service.js";
 import { extractText } from "unpdf";
 import { deleteCache, getCache, setCache } from "../utils/services/cache.service.js";
 import { getOrCreateConversation, saveMessage } from "../utils/services/conversation.service.js";
@@ -77,94 +77,93 @@ export const uploadFile = async (req, res, next) => {
   })
 }
 
+// get answers without streaming
 export const getAnswers = async (req, res, next) => {
-  const { question, conversationId } = req.body || {};
 
-  // get conversation or create on if not found
-  const conversation = await getOrCreateConversation(req.user.id, conversationId);
+    const { question, conversationId } = req.body;
 
-  // get embeddings
-  const embeddingsDetails = await getEmbeddings([question]);
+    // get or create conversation
+    const conversation = await getOrCreateConversation(req.user.id, conversationId);
 
-  // search vector database
-  const results = await prismaClient.$queryRaw(
-    Prisma.sql`
-    SELECT pdf_id, chunk_text, 1 - (
-      embedding <=> ${JSON.stringify(embeddingsDetails[0].values)}::vector
-      ) AS similarity
-    FROM pdf_chunk
-    WHERE
-    user_id = ${req.user.id}::uuid -- return only the pdf chunks that belong to the user
-    ORDER BY similarity DESC
-    LIMIT 5
-    `
-  );
+    // save user message 
+    await saveMessage(conversation.id, question, 'USER');
 
-  if (results.length === 0 || parseFloat(results[0].similarity) < 0.5) {
+    // get embeddings
+    const embeddingsDetails = await getEmbeddings([question]);
+
+    if (!embeddingsDetails?.[0]?.values) {
+      throw new Error("Embedding generation failed");
+    }
+
+    // search vector DB
+    const results = await prismaClient.$queryRaw(
+      Prisma.sql`
+        SELECT p.file_name, pdf_id, chunk_text,
+        1 - (embedding <=> ${JSON.stringify(embeddingsDetails[0].values)}::vector) AS similarity
+        FROM pdf_chunk
+        JOIN pdf p ON p.id = pdf_chunk.pdf_id
+        WHERE pdf_chunk.user_id = ${req.user.id}::uuid
+        ORDER BY similarity DESC
+        LIMIT 5
+      `
+    );
+
+    // if no results found or similarity is too low
+    const similarity = Number(results?.[0]?.similarity || 0);
+
+    if (!results.length || similarity < 0.5) {
+      return res.status(200).json({
+        data: {
+          answer: "No relevant information found across your uploaded documents."
+        }
+      });
+    }
+
+    // unique + sorted pdfIds (stable cache key)
+    const pdfIds = [...new Set(results.map(r => r.pdf_id))].sort();
+    const keySource = `${question.trim().toLowerCase()}:${pdfIds.join(',')}:${req.user.id}`;
+
+
+  // array of sources
+  const sources = getPdfSources(results);
+    
+    let data = await getCache(keySource);
+    const isCached = !!(data && data.answer);
+    
+    if (!isCached) {
+      // clean context
+      const context = results.map(r => r.chunk_text).join("\n\n");
+      
+      // generate answer
+      const answer = await getAnswersByAi({ context, question });
+      
+      // save assistant message
+      await saveMessage(conversation.id, answer, 'ASSISTANT');
+      
+      data = {
+        answer,
+        sources
+      };
+
+      // cache it
+      await setCache(keySource, data, 600);
+    }
+
+    else{
+      // save assistant message
+      await saveMessage(conversation.id, data.answer, 'ASSISTANT');
+
+    }
+
     return res.status(200).json({
       data: {
-        answer: "No relevant information found across your uploaded documents."
-      }
-    })
-  }
-
-  let data;
-
-  // check if the data is stored in cache 
-  const pdfIds = [...new Set(results.map(r => r.pdf_id))]
-  const keySource = `${question}:${pdfIds.join()}:${req.user.id}`
-  data = await getCache(keySource)
-
-  let isCached = true; // cache flag
-
-  // cache not present, call LLM to generate answers
-  if (!data || !data.answer) {
-
-    isCached = false;
-
-    // clean context
-    const context = results.map(r => r.chunk_text).join("\n\n");
-
-    // save user's message
-    await saveMessage(conversation.id, question, 'USER')
-
-    // generate answer
-    const answer = await getAnswersByAi({ context, question });
-
-    //save assistant's message
-    await saveMessage(conversation.id, answer, 'ASSISTANT')
-
-    // find pdf sources of answer
-    const sources = await prismaClient.pdf.findMany({
-      where: {
-        id: { in: pdfIds },
-        user_id: req.user.id
-      },
-      select: {
-        id: true,
-        file_name: true
+        content: data,
+        conversationId: conversation.id,
+        sources,
+        isCached
       }
     });
-
-    data = {
-      answer,
-      sources: sources
-    }
-
-    // store data in redis as a cache
-    await setCache(keySource, data, 600)
-  }
-
-  // send answer
-  res.status(200).json({
-    data: {
-      content: data,
-      conversationId: conversation.id,
-      isCached: !!isCached,
-    }
-  });
-
-}
+};
 
 // user's all uploaded files details (name, created_at)
 export const getMyFiles = async (req, res, next) => {
@@ -252,6 +251,9 @@ export const getAnswersStream = async (req, res, next) => {
   let conversation;
   try {
     conversation = await getOrCreateConversation(req.user.id, conversationId);
+
+    // save message with flag of SUCCESS
+    await saveMessage(conversation.id, question, 'USER', 'SUCCESS')
   } catch (err) {
     console.log(err);
     sendEvent("error", {
@@ -260,6 +262,7 @@ export const getAnswersStream = async (req, res, next) => {
     res.end();
     return;
   }
+
 
   // delete the messages from cache (latest message page)
   try {
@@ -277,7 +280,7 @@ export const getAnswersStream = async (req, res, next) => {
     const results = await prismaClient.$queryRaw(
       Prisma.sql`
   SELECT 
-    p.id, 
+    pdf_id, 
     p.file_name, 
     chunk_text, 
     1 - (
@@ -294,9 +297,6 @@ export const getAnswersStream = async (req, res, next) => {
     // no relevant context found
     if (results.length === 0 || parseFloat(results[0].similarity) < 0.5) {
 
-      // save message with flag of SUCCESS
-      await saveMessage(conversation.id, question, 'USER', 'SUCCESS')
-
       // save message with flag of NO RESULT FOUND
       await saveMessage(conversation.id, '', 'ASSISTANT', 'NO_RESULT')
 
@@ -310,10 +310,12 @@ export const getAnswersStream = async (req, res, next) => {
       return;
     }
 
+    
+    // unique + sorted pdfIds (stable cache key)
+    const pdfIds = [...new Set(results.map(r => r.pdf_id))].sort();
+    const keySource = `${question.trim().toLowerCase()}:${pdfIds.join(',')}:${req.user.id}`;    
+    
     // check cache before streaming
-    const pdfIds = [...new Set(results.map((r) => r.pdf_id))];
-    const keySource = `${question}:${pdfIds.join()}:${req.user.id}`;
-
     let cached;
     try {
       cached = await getCache(keySource);
@@ -323,8 +325,6 @@ export const getAnswersStream = async (req, res, next) => {
     }
 
     if (cached && cached.answer) {
-      // save user's message in DB
-      await saveMessage(conversation.id, question, 'USER', 'SUCCESS')
 
       // save assistant's message
       await saveMessage(conversation.id, cached.answer, 'ASSISTANT', 'SUCCESS')
@@ -349,9 +349,6 @@ export const getAnswersStream = async (req, res, next) => {
     // clean context
     const context = results.map(r => r.chunk_text).join("\n\n");
 
-    // save user's message in DB
-    await saveMessage(conversation.id, question, 'USER', 'SUCCESS')
-
     // stream answer from LLM
     await getAnswersByAiStream({
       context,
@@ -369,18 +366,7 @@ export const getAnswersStream = async (req, res, next) => {
         await saveMessage(conversation.id, fullAnswer, 'ASSISTANT', 'SUCCESS')
 
         // get answer sources
-        const sourcesMap = new Map();
-
-        results.forEach(r => {
-          if (!sourcesMap.has(r.pdf_id)) {
-            sourcesMap.set(r.pdf_id, {
-              id: r.pdf_id,
-              file_name: r.file_name
-            });
-          }
-        });
-
-        const sources = Array.from(sourcesMap.values());
+        const sources = getPdfSources(results);
 
         // save to cache
         try {

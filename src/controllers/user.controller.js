@@ -7,6 +7,9 @@ import { findUserByFilter } from "../utils/services/user.service.js";
 export const getMe = async (req, res, next) => {
     const user = await findUserByFilter(
         { id: req.user.id }, 'Account not found.', true, true);
+    
+    // remove password from the response
+    user.password = undefined;
 
     res.status(200).json({
         status: 'success',
