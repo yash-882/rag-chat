@@ -46,7 +46,6 @@ export const uploadFile = async (req, res, next) => {
       return Prisma.sql`(
       gen_random_uuid(), 
       ${pdf.id}::uuid, -- pdf id
-      ${req.user.id}::uuid, -- makes sure the user can only query their own data
       ${chunk}, -- chunk text
       ${vec}::vector -- embedding
     )`;
@@ -55,8 +54,8 @@ export const uploadFile = async (req, res, next) => {
     // insert all pdf chunks
     await tx.$queryRaw(
       Prisma.sql`
-      INSERT INTO pdf_chunk (id, pdf_id, user_id, chunk_text, embedding)
-      -- output values: ( id, pdf_id, user_id, chunk_text, chunk_index, embedding ), and so on..
+      INSERT INTO pdf_chunk (id, pdf_id, chunk_text, embedding)
+      -- output values: ( id, pdf_id, chunk_text, chunk_index, embedding ), and so on..
       VALUES ${Prisma.join(values)} 
     `
     );
@@ -96,14 +95,19 @@ export const getAnswers = async (req, res, next) => {
 
     // search vector DB
     const results = await prismaClient.$queryRaw(
-      Prisma.sql`
-        SELECT p.file_name, pdf_id, chunk_text,
-        1 - (embedding <=> ${JSON.stringify(embeddingsDetails[0].values)}::vector) AS similarity
-        FROM pdf_chunk
-        JOIN pdf p ON p.id = pdf_chunk.pdf_id
-        WHERE pdf_chunk.user_id = ${req.user.id}::uuid
-        ORDER BY similarity DESC
-        LIMIT 5
+Prisma.sql`
+      SELECT 
+        pdf_id, 
+        file_name, 
+        pc.chunk_text, 
+        1 - (
+          embedding <=> ${JSON.stringify(embeddingsDetails[0].values)}::vector
+        ) AS similarity
+      FROM pdf
+      JOIN pdf_chunk pc ON pdf.id = pc.pdf_id
+      WHERE user_id = ${req.user.id}::uuid
+      ORDER BY similarity DESC
+      LIMIT 5
       `
     );
 
@@ -262,7 +266,6 @@ export const getAnswersStream = async (req, res, next) => {
     return;
   }
 
-
   // delete the messages from cache (latest message page)
   try {
     await deleteCache(`messages:${req.user.id}:${conversation.id}:first`);
@@ -272,6 +275,7 @@ export const getAnswersStream = async (req, res, next) => {
   }
 
   try {
+
     // get embedding of question
     const embeddingDetails = await getEmbeddings([question]);
 
@@ -280,14 +284,14 @@ export const getAnswersStream = async (req, res, next) => {
       Prisma.sql`
   SELECT 
     pdf_id, 
-    p.file_name, 
-    chunk_text, 
+    file_name, 
+    pc.chunk_text, 
     1 - (
       embedding <=> ${JSON.stringify(embeddingDetails[0].values)}::vector
     ) AS similarity
-  FROM pdf_chunk pc
-  JOIN pdf p ON p.id = pc.pdf_id
-  WHERE pc.user_id = ${req.user.id}::uuid
+  FROM pdf
+  JOIN pdf_chunk pc ON pdf.id = pc.pdf_id
+  WHERE user_id = ${req.user.id}::uuid
   ORDER BY similarity DESC
   LIMIT 5
 `
@@ -327,7 +331,7 @@ export const getAnswersStream = async (req, res, next) => {
 
       // save assistant's message
       await saveMessage(conversation.id, cached.answer, 'ASSISTANT', 'SUCCESS')
-
+    
       // simulate streaming from cache — split by word and send
       const words = cached.answer.split(" ");
       for (const word of words) {
