@@ -1,5 +1,7 @@
 import jwt from "jsonwebtoken";
 import opError from "../utils/classes/opError.class.js";
+import { findUserByFilter } from "../utils/services/user.service.js";
+import { getCache } from "../utils/services/cache.service.js";
 
 export const lowerCaseEmail = (req, res, next) => {
     req.body.email = req.body?.email?.toLowerCase().trim() || '';
@@ -7,7 +9,7 @@ export const lowerCaseEmail = (req, res, next) => {
 }
 
 // verify jwt before allowing to access protected routes
-export const authenticate = (req, res, next) => {
+export const authenticate = async (req, res, next) => {
     const token = req.cookies.AT;
 
     if (!token) {
@@ -16,7 +18,39 @@ export const authenticate = (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
-        req.user = decoded;
+
+        // Check cache or DB to verify user existence.
+        // If present in cache, the user must also exist in the DB,
+        // since cache entries are invalidated on update or deletion.
+        const userExistsInCache = await getCache(`user-profile:${decoded.id}`)
+        let userExistsInDB;
+
+        if (!userExistsInCache) {
+            userExistsInDB = await findUserByFilter({ id: decoded.id }, '', false, false);
+
+            if (!userExistsInDB) {
+
+                // clear cookies
+                res.clearCookie('AT', {
+                    httpOnly: true,
+                    secure: process.env.NODE_ENV === 'production',
+                    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+                });
+
+                res.clearCookie('RT', {
+                    httpOnly: true,
+                    secure: process.env.NODE_ENV === 'production',
+                    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+                });
+
+                return next(new opError('Account not found', 401));
+            }
+        }
+
+        // set user data to request object
+        req.user = userExistsInCache || userExistsInDB;
+        req.isUserCached = !!userExistsInCache;
+        req.userCacheKey = `user-profile:${decoded.id}`;
         next();
     } catch (err) {
         if (err.name === 'TokenExpiredError') {

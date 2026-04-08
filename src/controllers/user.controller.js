@@ -1,15 +1,31 @@
 import prisma from "../configs/prisma.config.js";
 import opError from "../utils/classes/opError.class.js";
 import { compareBcryptHash } from "../utils/services/auth.service.js";
+import { deleteCache, setCache } from "../utils/services/cache.service.js";
 import { findUserByFilter } from "../utils/services/user.service.js";
 
-// get current user profile
+// get current user profile (DB or cache hits in auth middleware so no need to fetch again)
 export const getMe = async (req, res, next) => {
-    const user = await findUserByFilter(
-        { id: req.user.id }, 'Account not found.', true, true);
-    
-    // remove password from the response
+    const user = {...req.user};
+
+    // remove the password before responding
     user.password = undefined;
+
+    // check if the user already exists in cache
+    if (req.isUserCached) {
+
+        return res.status(200).json({
+            status: 'success',
+            data: {
+                user,
+            },
+        });
+    }
+
+    // store in cache 
+    const key = req.userCacheKey ?? `user-profile:${req.user.id}`;
+
+    await setCache(key, req.user, 1200)
 
     res.status(200).json({
         status: 'success',
@@ -52,6 +68,10 @@ export const updateMe = async (req, res, next) => {
         },
     });
 
+    // remove user profile from cache 
+    const cacheKeySource = req.userCacheKey ?? `user-profile:${req.user.id}`;
+    await deleteCache(cacheKeySource);
+
     res.status(200).json({
         status: 'success',
         message: 'Profile updated successfully.',
@@ -64,17 +84,23 @@ export const updateMe = async (req, res, next) => {
 // delete user account
 export const deleteMe = async (req, res, next) => {
 
-    const { password } = req.body;
+    const { password: enteredPassword } = req.body;
+    let userPassword = req.user.password || '';
 
-    // find user
     const messageOnErr = 'Account not found.';
-    const user = await findUserByFilter(
-        { id: req.user.id }, messageOnErr, true, true);
 
+    if (!userPassword) {
+
+        // find user if user object doesnt contain password
+        const user = await findUserByFilter(
+            { id: req.user.id }, messageOnErr, true, true);
+
+        userPassword = user.password;
+    }
 
     // verify password
     await compareBcryptHash(
-        password, user.password, true, 'Incorrect password.', 400);
+        enteredPassword, userPassword, true, 'Incorrect password', 400);
 
     // delete user
     await prisma.user.delete({
@@ -82,6 +108,10 @@ export const deleteMe = async (req, res, next) => {
             id: req.user.id,
         },
     });
+
+    // remove user profile from cache 
+    const cacheKeySource = req.userCacheKey ?? `user-profile:${req.user.id}`;
+    await deleteCache(cacheKeySource);
 
     // clear all auth cookies
     res.clearCookie('AT', {
@@ -95,8 +125,6 @@ export const deleteMe = async (req, res, next) => {
         sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
     });
 
-    res.status(200).json({
-        status: 'success',
-        message: 'Account deleted successfully.',
-    });
+    // end response
+    res.status(204).end();
 };
