@@ -6,10 +6,11 @@ import prisma from "../configs/prisma.config.js";
 // get all messages for a specific conversation
 export const getMessages = async (req, res, next) => {
   const { conversationId } = req.params;
-  let { last_msg_seq, last_msg_time } = req.query;
+  let { last_msg_seq, last_msg_time, limit = 10 } = req.query;
+  limit = Number(limit);
   
   // parses the cursors (type conversions), throws error if cursors are invalid
-  const { lastMsgTime, lastMsgSeq } = parseMessageCursor(last_msg_time, last_msg_seq);
+  const { lastMsgTime, lastMsgSeq } = parseMessageCursor(last_msg_time, last_msg_seq);  
 
   // cache key 
   const cacheKey = lastMsgSeq
@@ -19,11 +20,22 @@ export const getMessages = async (req, res, next) => {
     // check cache
   const cachedMessages = await getCache(cacheKey);
 
+  // next message cursor
+  let nextMsgCursor = cachedMessages?.length > 0
+    ? cachedMessages[cachedMessages.length - 1]
+    : null;
+
+
   if (cachedMessages) {    
     return res.status(200).json({
       status: 'success',
       data: {
-        cursor: null,
+        cursor: nextMsgCursor
+        ? {
+            created_at: nextMsgCursor.created_at,
+            last_msg_seq: nextMsgCursor.seq
+          }
+        : null,
         messages: cachedMessages,
       },
     });
@@ -40,9 +52,6 @@ export const getMessages = async (req, res, next) => {
   if (!conversation) {
     return next(new opError('Conversation not found.', 404));
   }
-
-  // to fetch in limit
-  const { limit } = req.pagination;
 
   const whereClause = {
     conversation_id: conversationId,
@@ -77,7 +86,7 @@ export const getMessages = async (req, res, next) => {
   });
 
   // get last message details
-  const nextMsgCursor = messages.length > 0
+  nextMsgCursor = messages.length > 0
     ? messages[messages.length - 1]
     : null;
 

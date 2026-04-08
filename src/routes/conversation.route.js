@@ -16,7 +16,7 @@ router.use(authenticate);
 router.get('/list', paginate(12), getMyConversations);
 
 // get all messages for a specific conversation
-router.get('/:conversationId/messages', paginate(24), getMessages);
+router.get('/:conversationId/messages', getMessages);
 
 // delete a specific conversation
 router.delete('/delete/:conversationId', deleteConversation);
