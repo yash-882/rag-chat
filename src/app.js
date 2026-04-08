@@ -7,8 +7,12 @@ import cors from 'cors';
 import conversationRouter from './routes/conversation.route.js';
 import userRouter from './routes/user.route.js';
 import QueryString from 'qs';
+import helmet from 'helmet';
 
 const app = express();
+
+// security headers
+app.use(helmet())
 
 // cookie parser
 app.use(cookieParser());
