@@ -49,14 +49,14 @@ export const parseMessageCursor = (lastMsgTime, lastMsgSeq) => {
       const parsed = new Date(lastMsgTime);
   
       if (isNaN(parsed)) {
-        return next(new opError('Invalid cursor for getting messages.', 400));
+        throw new opError('Invalid cursor for getting messages.', 400);
       }
       lastMsgTime = parsed;
     }
   
     // check type of sequence number
     if(lastMsgSeq && isNaN(Number(lastMsgSeq))){
-      return next(new opError('Invalid sequence number for getting messages.', 400));
+      throw new opError('Invalid sequence number for getting messages.', 400);
     }
 
     return {
