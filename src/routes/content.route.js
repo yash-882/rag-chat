@@ -9,13 +9,15 @@ import multerUploader from '../utils/services/multer.service.js'
 import { checkRequiredFields } from '../middlewares/checkRequiFields.middleware.js'
 import { authenticate } from '../middlewares/auth.middleware.js'
 import { fileUploadRequirement } from '../middlewares/content.middleware.js'
+import { aiRateLimit, uploadRateLimit } from '../middlewares/rateLimit.middleware.js'
 
 const router = express.Router()
 
 router.use(authenticate)
 
 // content upload
-router.post('/upload-file', 
+router.post('/upload-file',
+uploadRateLimit,
 multerUploader({
     fileSize: 1024 * 1024 * process.env.FILE_SIZE_LIMIT_MB, // limit file size
     mimetypes: ['application/pdf']
@@ -26,12 +28,12 @@ fileUploadRequirement,
 uploadFile)
 
 // get answers of uploaded contents
-router.post('/get-answers', checkRequiredFields([
+router.post('/get-answers', aiRateLimit, checkRequiredFields([
     { name: 'question', type: 'string' }
 ]), getAnswers)
 
 // get answers in stream of uploade4d contents
-router.post('/get-answers-stream', checkRequiredFields([
+router.post('/get-answers-stream', aiRateLimit, checkRequiredFields([
     { name: 'question', type: 'string' }
 ]), getAnswersStream)
 

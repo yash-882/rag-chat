@@ -55,4 +55,3 @@ async function startServer() {
 }
 await startServer();
 
-export { isRedisAlive }

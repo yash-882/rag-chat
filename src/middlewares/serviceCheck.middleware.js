@@ -1,4 +1,4 @@
-import { isRedisAlive } from '../server.js';
+import redisClient from '../configs/redis.config.js';
 import opError from '../utils/classes/opError.class.js';
 
 /**
@@ -9,7 +9,7 @@ import opError from '../utils/classes/opError.class.js';
 
 export const checkRedisStatus = (isCaching = false) => {
     return (req, res, next) => {
-        if (isRedisAlive === false && isCaching === false) {
+        if (redisClient.isOpen === false && isCaching === false) {
             return next(new opError('Service temporarily unavailable. Please try again later.', 503));
         }
 
