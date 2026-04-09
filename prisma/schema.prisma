@@ -12,12 +12,12 @@ model pdf {
   file_name  String      @db.VarChar(100)
   created_at DateTime    @default(now())
   user_id    String      @db.Uuid
-  file_hash  String      @unique @db.VarChar(100)
+  file_hash  String      @db.VarChar(100)
   user       user        @relation(fields: [user_id], references: [id], onDelete: Cascade)
   pdf_chunks pdf_chunk[]
 
   // for querying user's pdfs
-  @@index([user_id])
+  @@unique([user_id, file_hash])
 }
 
 model pdf_chunk {

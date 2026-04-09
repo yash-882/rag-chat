@@ -198,16 +198,17 @@ export type pdfOrderByWithRelationInput = {
 
 export type pdfWhereUniqueInput = Prisma.AtLeast<{
   id?: string
-  file_hash?: string
+  user_id_file_hash?: Prisma.pdfUser_idFile_hashCompoundUniqueInput
   AND?: Prisma.pdfWhereInput | Prisma.pdfWhereInput[]
   OR?: Prisma.pdfWhereInput[]
   NOT?: Prisma.pdfWhereInput | Prisma.pdfWhereInput[]
   file_name?: Prisma.StringFilter<"pdf"> | string
   created_at?: Prisma.DateTimeFilter<"pdf"> | Date | string
   user_id?: Prisma.UuidFilter<"pdf"> | string
+  file_hash?: Prisma.StringFilter<"pdf"> | string
   user?: Prisma.XOR<Prisma.UserScalarRelationFilter, Prisma.userWhereInput>
   pdf_chunks?: Prisma.Pdf_chunkListRelationFilter
-}, "id" | "file_hash">
+}, "id" | "user_id_file_hash">
 
 export type pdfOrderByWithAggregationInput = {
   id?: Prisma.SortOrder
@@ -288,6 +289,11 @@ export type pdfUncheckedUpdateManyInput = {
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
   user_id?: Prisma.StringFieldUpdateOperationsInput | string
   file_hash?: Prisma.StringFieldUpdateOperationsInput | string
+}
+
+export type pdfUser_idFile_hashCompoundUniqueInput = {
+  user_id: string
+  file_hash: string
 }
 
 export type pdfCountOrderByAggregateInput = {
