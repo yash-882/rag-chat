@@ -3,39 +3,46 @@ import { RedisStore } from 'rate-limit-redis';
 import redisClient from '../configs/redis.config.js';
 
 // Rate limiter
-const createLimiter = (windowMs, limit, message) => {
-  let limiter = null;
+const createLimiter = (windowMs, max, message) => {
+  if (redisClient.isOpen === true) {
+    return rateLimit({
+      windowMs,
+      max,
+      message: {
+        status: 'fail',
+        message
+      },
+      standardHeaders: true,
+      legacyHeaders: false,
+      store: new RedisStore({
+        sendCommand: (...args) => redisClient.sendCommand(args),
+      }),
+    });
+  }
 
-  return (req, res, next) => {
-    if (!redisClient.isOpen) return next(); // Redis down — skip limiting
-
-    if (!limiter) {
-      limiter = rateLimit({
-        windowMs,
-        limit,
-        message: { status: 'fail', message },
-        standardHeaders: 'draft-7',
-        legacyHeaders: false,
-        store: new RedisStore({
-          sendCommand: (...args) => redisClient.sendCommand(args),
-        }),
-      });
-    }
-
-    return limiter(req, res, next);
-  };
+  //. return a default limit until redis is connected
+  return rateLimit({
+    windowMs,
+    max,
+    message: {
+      status: 'fail',
+      message
+    },
+    standardHeaders: true,
+    legacyHeaders: false,
+  });
 };
 
 // for AI endpoints (expensive)
 export const aiRateLimit = createLimiter(
-    60 * 1000,       // 1 minute window
-    15,              // 15 requests per minute
-    'Too many requests. Please slow down.'
+  60 * 1000,
+  15,
+  'Too many requests. Please slow down.'
 );
 
-// for upload endpoint
+// files upload limit
 export const uploadRateLimit = createLimiter(
-    60 * 1000,       // 1 minute window
-    10,               // 10 uploads per minute
-    'Too many upload attempts. Please wait.'
+  60 * 1000,
+  10,
+  'Too many upload attempts. Please wait.'
 );
