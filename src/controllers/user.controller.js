@@ -86,6 +86,12 @@ export const deleteMe = async (req, res, next) => {
 
     const { password: enteredPassword } = req.body;
     let userPassword = req.user.password || '';
+    
+    // user cannot be deleted if registered via google but not via local strategy (password is required to delete account)
+    if(!req.user.auths?.includes('LOCAL')){
+        return next(new opError(
+            'Your account is registered via Google. You must reset your password to delete your account.', 400));
+    }
 
     const messageOnErr = 'Account not found.';
 
@@ -98,6 +104,7 @@ export const deleteMe = async (req, res, next) => {
         userPassword = user.password;
     }
 
+    
     // verify password
     await compareBcryptHash(
         enteredPassword, userPassword, true, 'Incorrect password', 400);

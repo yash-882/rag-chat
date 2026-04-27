@@ -14,7 +14,7 @@ A production-ready RAG backend that lets users upload PDF documents and ask ques
 - **Redis Caching** — cache-aside strategy for answers and PDF lists; graceful degradation if Redis is down
 - **Duplicate Detection** — SHA-256 file hashing prevents re-uploading the same PDF
 - **Conversations & Message History** — full conversation threading with cursor-based pagination
-- **Auth System** — OTP-verified sign-up, JWT access/refresh tokens via HTTP-only cookies, forgot password flow
+- **Auth System** — OTP-verified sign-up, JWT access/refresh tokens via HTTP-only cookies, forgot password flow, Google OAuth login/sign-up
 - **Upload Limits** — configurable max PDF count per user
 
 ---
@@ -31,7 +31,7 @@ A production-ready RAG backend that lets users upload PDF documents and ask ques
 | Embeddings | Google Gemini (`@google/genai`) |
 | LLM | Groq via OpenAI SDK (`llama-3.1-8b-instant`) |
 | PDF Parsing | `unpdf` |
-| Auth | JWT (`jsonwebtoken`), bcrypt |
+| Auth | JWT (`jsonwebtoken`), bcrypt, Passport.js (Google OAuth) |
 | Email | Mailjet (`node-mailjet`) |
 | File Upload | Multer |
 
@@ -40,6 +40,7 @@ A production-ready RAG backend that lets users upload PDF documents and ask ques
 ## Project Structure
 
 ```
+loadEnvVars.js                   # Environment variables loader
 src/
 ├── app.js                        # Express app setup, middleware, routes
 ├── server.js                     # Server bootstrap, DB/Redis connection
@@ -64,22 +65,23 @@ src/
 │   ├── content.route.js
 │   ├── conversation.route.js
 │   └── user.route.js
-└── utils/
-    ├── classes/
-    │   └── opError.class.js      # Operational error class
-    └── services/
-        ├── ai.service.js         # Embeddings + LLM (streaming & non-streaming)
-        ├── auth.service.js
-        ├── cache.service.js
-        ├── conversation.service.js
-        ├── email.service.js
-        ├── multer.service.js
-        ├── pdf.service.js        # Chunking, hashing, source extraction
-        ├── token.service.js
-        ├── user.service.js
-        └── classes/
-            └── redis.service.js  # Redis abstraction (OTP, cache)
-
+├── utils/
+│   ├── classes/
+│   │   └── opError.class.js      # Operational error class
+│   └── services/
+│       ├── ai.service.js         # Embeddings + LLM (streaming & non-streaming)
+│       ├── auth.service.js
+│       ├── cache.service.js
+│       ├── conversation.service.js
+│       ├── email.service.js
+│       ├── multer.service.js
+│       ├── pdf.service.js        # Chunking, hashing, source extraction
+│       ├── token.service.js
+│       ├── user.service.js
+│       └── classes/
+│           └── redis.service.js  # Redis abstraction (OTP, cache)
+auth-strategies/
+├── googleOAuth2.js               # Google OAuth2 strategy with Passport.js
 prisma/
 ├── schema.prisma
 └── migrations/
@@ -95,6 +97,7 @@ model user {
   email         String         @unique
   password      String
   name          String
+  auths         String[]       // Auth methods: ['LOCAL', 'GOOGLE']
   created_at    DateTime       @default(now())
   pdfs          pdf[]
   conversations conversation[]
@@ -146,6 +149,8 @@ model message {
 
 | Method | Endpoint | Auth | Description |
 |---|---|---|---|
+| GET | `/google` | — | Initiate Google OAuth login/sign-up |
+| GET | `/google/callback` | — | Handle Google OAuth callback |
 | POST | `/sign-up/init` | — | Send OTP to email to begin registration |
 | POST | `/sign-up/complete` | — | Verify OTP and create account |
 | POST | `/login` | — | Login and receive JWT cookies |
@@ -266,6 +271,11 @@ MAILJET_API_KEY=your_mailjet_api_key
 MAILJET_SECRET_KEY=your_mailjet_secret_key
 SENDER_EMAIL=your_sender_email
 
+# Google OAuth
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_OAUTH_CALLBACK_URL=http://localhost:3000/api/auth/google/callback
+
 # Upload limits
 FILE_SIZE_LIMIT_MB=10
 MAX_PDF_UPLOADS=10
@@ -294,6 +304,9 @@ npm install
 # Set up environment variables
 cp .env.example .env
 # Fill in your values
+
+# For Google OAuth, create credentials at https://console.developers.google.com/
+# Set authorized redirect URI to: http://localhost:3000/api/auth/google/callback (or your domain)
 
 # Enable pgvector extension in PostgreSQL
 # Run in psql: CREATE EXTENSION IF NOT EXISTS vector;
