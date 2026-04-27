@@ -23,3 +23,11 @@ export const MessageType = {
 } as const
 
 export type MessageType = (typeof MessageType)[keyof typeof MessageType]
+
+
+export const AuthProvider = {
+  LOCAL: 'LOCAL',
+  GOOGLE: 'GOOGLE'
+} as const
+
+export type AuthProvider = (typeof AuthProvider)[keyof typeof AuthProvider]

@@ -46,6 +46,7 @@ export type UserCountAggregateOutputType = {
   password: number
   name: number
   created_at: number
+  auths: number
   _all: number
 }
 
@@ -72,6 +73,7 @@ export type UserCountAggregateInputType = {
   password?: true
   name?: true
   created_at?: true
+  auths?: true
   _all?: true
 }
 
@@ -153,6 +155,7 @@ export type UserGroupByOutputType = {
   password: string
   name: string
   created_at: Date
+  auths: $Enums.AuthProvider[]
   _count: UserCountAggregateOutputType | null
   _min: UserMinAggregateOutputType | null
   _max: UserMaxAggregateOutputType | null
@@ -182,6 +185,7 @@ export type userWhereInput = {
   password?: Prisma.StringFilter<"user"> | string
   name?: Prisma.StringFilter<"user"> | string
   created_at?: Prisma.DateTimeFilter<"user"> | Date | string
+  auths?: Prisma.EnumAuthProviderNullableListFilter<"user">
   pdfs?: Prisma.PdfListRelationFilter
   conversations?: Prisma.ConversationListRelationFilter
 }
@@ -192,6 +196,7 @@ export type userOrderByWithRelationInput = {
   password?: Prisma.SortOrder
   name?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
+  auths?: Prisma.SortOrder
   pdfs?: Prisma.pdfOrderByRelationAggregateInput
   conversations?: Prisma.conversationOrderByRelationAggregateInput
 }
@@ -205,6 +210,7 @@ export type userWhereUniqueInput = Prisma.AtLeast<{
   password?: Prisma.StringFilter<"user"> | string
   name?: Prisma.StringFilter<"user"> | string
   created_at?: Prisma.DateTimeFilter<"user"> | Date | string
+  auths?: Prisma.EnumAuthProviderNullableListFilter<"user">
   pdfs?: Prisma.PdfListRelationFilter
   conversations?: Prisma.ConversationListRelationFilter
 }, "id" | "email">
@@ -215,6 +221,7 @@ export type userOrderByWithAggregationInput = {
   password?: Prisma.SortOrder
   name?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
+  auths?: Prisma.SortOrder
   _count?: Prisma.userCountOrderByAggregateInput
   _max?: Prisma.userMaxOrderByAggregateInput
   _min?: Prisma.userMinOrderByAggregateInput
@@ -229,6 +236,7 @@ export type userScalarWhereWithAggregatesInput = {
   password?: Prisma.StringWithAggregatesFilter<"user"> | string
   name?: Prisma.StringWithAggregatesFilter<"user"> | string
   created_at?: Prisma.DateTimeWithAggregatesFilter<"user"> | Date | string
+  auths?: Prisma.EnumAuthProviderNullableListFilter<"user">
 }
 
 export type userCreateInput = {
@@ -237,6 +245,7 @@ export type userCreateInput = {
   password: string
   name?: string
   created_at?: Date | string
+  auths?: Prisma.userCreateauthsInput | $Enums.AuthProvider[]
   pdfs?: Prisma.pdfCreateNestedManyWithoutUserInput
   conversations?: Prisma.conversationCreateNestedManyWithoutUserInput
 }
@@ -247,6 +256,7 @@ export type userUncheckedCreateInput = {
   password: string
   name?: string
   created_at?: Date | string
+  auths?: Prisma.userCreateauthsInput | $Enums.AuthProvider[]
   pdfs?: Prisma.pdfUncheckedCreateNestedManyWithoutUserInput
   conversations?: Prisma.conversationUncheckedCreateNestedManyWithoutUserInput
 }
@@ -257,6 +267,7 @@ export type userUpdateInput = {
   password?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  auths?: Prisma.userUpdateauthsInput | $Enums.AuthProvider[]
   pdfs?: Prisma.pdfUpdateManyWithoutUserNestedInput
   conversations?: Prisma.conversationUpdateManyWithoutUserNestedInput
 }
@@ -267,6 +278,7 @@ export type userUncheckedUpdateInput = {
   password?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  auths?: Prisma.userUpdateauthsInput | $Enums.AuthProvider[]
   pdfs?: Prisma.pdfUncheckedUpdateManyWithoutUserNestedInput
   conversations?: Prisma.conversationUncheckedUpdateManyWithoutUserNestedInput
 }
@@ -277,6 +289,7 @@ export type userCreateManyInput = {
   password: string
   name?: string
   created_at?: Date | string
+  auths?: Prisma.userCreateauthsInput | $Enums.AuthProvider[]
 }
 
 export type userUpdateManyMutationInput = {
@@ -285,6 +298,7 @@ export type userUpdateManyMutationInput = {
   password?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  auths?: Prisma.userUpdateauthsInput | $Enums.AuthProvider[]
 }
 
 export type userUncheckedUpdateManyInput = {
@@ -293,11 +307,20 @@ export type userUncheckedUpdateManyInput = {
   password?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  auths?: Prisma.userUpdateauthsInput | $Enums.AuthProvider[]
 }
 
 export type UserScalarRelationFilter = {
   is?: Prisma.userWhereInput
   isNot?: Prisma.userWhereInput
+}
+
+export type EnumAuthProviderNullableListFilter<$PrismaModel = never> = {
+  equals?: $Enums.AuthProvider[] | Prisma.ListEnumAuthProviderFieldRefInput<$PrismaModel> | null
+  has?: $Enums.AuthProvider | Prisma.EnumAuthProviderFieldRefInput<$PrismaModel> | null
+  hasEvery?: $Enums.AuthProvider[] | Prisma.ListEnumAuthProviderFieldRefInput<$PrismaModel>
+  hasSome?: $Enums.AuthProvider[] | Prisma.ListEnumAuthProviderFieldRefInput<$PrismaModel>
+  isEmpty?: boolean
 }
 
 export type userCountOrderByAggregateInput = {
@@ -306,6 +329,7 @@ export type userCountOrderByAggregateInput = {
   password?: Prisma.SortOrder
   name?: Prisma.SortOrder
   created_at?: Prisma.SortOrder
+  auths?: Prisma.SortOrder
 }
 
 export type userMaxOrderByAggregateInput = {
@@ -338,6 +362,15 @@ export type userUpdateOneRequiredWithoutPdfsNestedInput = {
   update?: Prisma.XOR<Prisma.XOR<Prisma.userUpdateToOneWithWhereWithoutPdfsInput, Prisma.userUpdateWithoutPdfsInput>, Prisma.userUncheckedUpdateWithoutPdfsInput>
 }
 
+export type userCreateauthsInput = {
+  set: $Enums.AuthProvider[]
+}
+
+export type userUpdateauthsInput = {
+  set?: $Enums.AuthProvider[]
+  push?: $Enums.AuthProvider | $Enums.AuthProvider[]
+}
+
 export type userCreateNestedOneWithoutConversationsInput = {
   create?: Prisma.XOR<Prisma.userCreateWithoutConversationsInput, Prisma.userUncheckedCreateWithoutConversationsInput>
   connectOrCreate?: Prisma.userCreateOrConnectWithoutConversationsInput
@@ -358,6 +391,7 @@ export type userCreateWithoutPdfsInput = {
   password: string
   name?: string
   created_at?: Date | string
+  auths?: Prisma.userCreateauthsInput | $Enums.AuthProvider[]
   conversations?: Prisma.conversationCreateNestedManyWithoutUserInput
 }
 
@@ -367,6 +401,7 @@ export type userUncheckedCreateWithoutPdfsInput = {
   password: string
   name?: string
   created_at?: Date | string
+  auths?: Prisma.userCreateauthsInput | $Enums.AuthProvider[]
   conversations?: Prisma.conversationUncheckedCreateNestedManyWithoutUserInput
 }
 
@@ -392,6 +427,7 @@ export type userUpdateWithoutPdfsInput = {
   password?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  auths?: Prisma.userUpdateauthsInput | $Enums.AuthProvider[]
   conversations?: Prisma.conversationUpdateManyWithoutUserNestedInput
 }
 
@@ -401,6 +437,7 @@ export type userUncheckedUpdateWithoutPdfsInput = {
   password?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  auths?: Prisma.userUpdateauthsInput | $Enums.AuthProvider[]
   conversations?: Prisma.conversationUncheckedUpdateManyWithoutUserNestedInput
 }
 
@@ -410,6 +447,7 @@ export type userCreateWithoutConversationsInput = {
   password: string
   name?: string
   created_at?: Date | string
+  auths?: Prisma.userCreateauthsInput | $Enums.AuthProvider[]
   pdfs?: Prisma.pdfCreateNestedManyWithoutUserInput
 }
 
@@ -419,6 +457,7 @@ export type userUncheckedCreateWithoutConversationsInput = {
   password: string
   name?: string
   created_at?: Date | string
+  auths?: Prisma.userCreateauthsInput | $Enums.AuthProvider[]
   pdfs?: Prisma.pdfUncheckedCreateNestedManyWithoutUserInput
 }
 
@@ -444,6 +483,7 @@ export type userUpdateWithoutConversationsInput = {
   password?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  auths?: Prisma.userUpdateauthsInput | $Enums.AuthProvider[]
   pdfs?: Prisma.pdfUpdateManyWithoutUserNestedInput
 }
 
@@ -453,6 +493,7 @@ export type userUncheckedUpdateWithoutConversationsInput = {
   password?: Prisma.StringFieldUpdateOperationsInput | string
   name?: Prisma.StringFieldUpdateOperationsInput | string
   created_at?: Prisma.DateTimeFieldUpdateOperationsInput | Date | string
+  auths?: Prisma.userUpdateauthsInput | $Enums.AuthProvider[]
   pdfs?: Prisma.pdfUncheckedUpdateManyWithoutUserNestedInput
 }
 
@@ -502,6 +543,7 @@ export type userSelect<ExtArgs extends runtime.Types.Extensions.InternalArgs = r
   password?: boolean
   name?: boolean
   created_at?: boolean
+  auths?: boolean
   pdfs?: boolean | Prisma.user$pdfsArgs<ExtArgs>
   conversations?: boolean | Prisma.user$conversationsArgs<ExtArgs>
   _count?: boolean | Prisma.UserCountOutputTypeDefaultArgs<ExtArgs>
@@ -513,6 +555,7 @@ export type userSelectCreateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   password?: boolean
   name?: boolean
   created_at?: boolean
+  auths?: boolean
 }, ExtArgs["result"]["user"]>
 
 export type userSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetSelect<{
@@ -521,6 +564,7 @@ export type userSelectUpdateManyAndReturn<ExtArgs extends runtime.Types.Extensio
   password?: boolean
   name?: boolean
   created_at?: boolean
+  auths?: boolean
 }, ExtArgs["result"]["user"]>
 
 export type userSelectScalar = {
@@ -529,9 +573,10 @@ export type userSelectScalar = {
   password?: boolean
   name?: boolean
   created_at?: boolean
+  auths?: boolean
 }
 
-export type userOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "password" | "name" | "created_at", ExtArgs["result"]["user"]>
+export type userOmit<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = runtime.Types.Extensions.GetOmit<"id" | "email" | "password" | "name" | "created_at" | "auths", ExtArgs["result"]["user"]>
 export type userInclude<ExtArgs extends runtime.Types.Extensions.InternalArgs = runtime.Types.Extensions.DefaultArgs> = {
   pdfs?: boolean | Prisma.user$pdfsArgs<ExtArgs>
   conversations?: boolean | Prisma.user$conversationsArgs<ExtArgs>
@@ -552,6 +597,7 @@ export type $userPayload<ExtArgs extends runtime.Types.Extensions.InternalArgs =
     password: string
     name: string
     created_at: Date
+    auths: $Enums.AuthProvider[]
   }, ExtArgs["result"]["user"]>
   composites: {}
 }
@@ -982,6 +1028,7 @@ export interface userFieldRefs {
   readonly password: Prisma.FieldRef<"user", 'String'>
   readonly name: Prisma.FieldRef<"user", 'String'>
   readonly created_at: Prisma.FieldRef<"user", 'DateTime'>
+  readonly auths: Prisma.FieldRef<"user", 'AuthProvider[]'>
 }
     
 
