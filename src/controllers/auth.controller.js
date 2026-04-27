@@ -11,6 +11,7 @@ import RedisService from '../utils/services/classes/redis.service.js';
 import { findUserByFilter } from '../utils/services/user.service.js';
 import { generateTokens } from '../utils/services/token.service.js';
 import prisma from '../configs/prisma.config.js';
+import passport from 'passport';
 
 // create user
 export const initUserSignUp = async (req, res, next) => {
@@ -95,6 +96,7 @@ export const completeUserSignUp = async (req, res, next) => {
       name,
       email: storedEmail,
       password: hashedPassword,
+      auths: ['LOCAL'], // sign-up method (LOCAL)
     }
   });
 
@@ -118,6 +120,11 @@ export const login = async (req, res, next) => {
 
     // check if no user exists with the provided email, throws error
   const user = await findUserByFilter({email}, 'Email is not registered with us.', true, true)
+
+
+  if(!user.auths.includes('LOCAL')){
+    return next(new opError(`This email is registered via Google. Please use that method to login.`, 400))
+  }
 
   // compare password
   await compareBcryptHash(
@@ -215,6 +222,11 @@ export const changePassword = async (req, res, next) => {
 
   // find user by id from authenticated request
   const user = await findUserByFilter({ id: req.user.id }, 'User not found.', true, true);
+
+  // check if user has signed up using OAuth method, if yes then don't allow password change
+  if(!user.auths.includes('LOCAL')){
+    return next(new opError(`Password change not allowed. Your account is registered via Google.`, 400))
+   }
   
   // verify old password
   await compareBcryptHash(
@@ -315,11 +327,18 @@ export const completeForgotPassword = async (req, res, next) => {
   // hash new password
   const hashedNewPassword = await generateBcryptHash(newPassword, 12);
 
-  // update password in database
+  const user = await findUserByFilter({ email }, 'Email is not registered with us.', true, true);
+
+  const update = user.auths.includes('LOCAL') ?
+  { password: hashedNewPassword } :
+  { password: hashedNewPassword, auths: { push: 'LOCAL' } };
+
+  // update password in database and auths method
   await prisma.user.update({
-    where: { email },
-    data: { password: hashedNewPassword },
+    where: { id: user.id },
+    data: update,
   });
+
 
   // Remove the OTP data from Redis after successful password reset
   await redis.deleteData();
@@ -329,3 +348,47 @@ export const completeForgotPassword = async (req, res, next) => {
     message: 'Password reset successfully. You can now login with your new password.',
   });
 };
+
+
+// google OAUTH2 callback (the user is redirected to this callback
+// after clicking 'Allow access', then passport handles the auth flow)
+export const googleAuthCallback = (req, res, next) => {
+     passport.authenticate('google', { session: false }, (err, user, info) => {
+
+        // (db error, passport error, unauthorized error)
+        if(err)
+            return next(err)
+
+        // user denied the permission
+        if(!user){
+            return next(
+                new opError('Google authentication failed!', 400))
+        }
+     
+    // auth successful:
+
+   // get tokens
+  const { accessToken, refreshToken } = generateTokens({id: user.id, name: user.name})
+
+  res.cookie('AT', accessToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30days
+  });
+
+  res.cookie('RT', refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
+    maxAge: 30 * 24 * 60 * 60 * 1000, // 30days
+  });
+
+    // Redirect to the frontend OAuth callback page
+    // Cookies (AT, RT) are already set above — the frontend will call /my-profile
+    // to pick up the session.
+    const FRONTEND_URL = process.env.FRONTEND_URL;
+    return res.redirect(`${FRONTEND_URL}/oauth-callback`);
+
+     })(req, res, next)
+}

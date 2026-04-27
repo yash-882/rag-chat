@@ -5,6 +5,7 @@ import {
     changePassword,
     completeForgotPassword,
     completeUserSignUp, 
+    googleAuthCallback, 
     initForgotPassword, 
     initUserSignUp, 
     login, 
@@ -15,9 +16,21 @@ import {
     lowerCaseEmail, 
     validateLoginFields, 
     validateSignUpFields } from '../middlewares/auth.middleware.js';
+import passport from 'passport';
+import { GoogleAuthStrategy } from '../../auth-strategies/googleOAuth2.js';
 
 const router = express.Router();
 
+// use google OAUTH2 strategy in passport
+passport.use(GoogleAuthStrategy);
+
+// Route for Google OAUTH2 authentication
+router.get('/google', passport.authenticate('google', { scope: ['email', 'profile'] }));
+
+// Route for handling Google OAUTH2 callback
+router.get('/google/callback', googleAuthCallback);
+    
+ 
 // Route to initiate sign up and send OTP
 router.post('/sign-up/init',
     checkRedisStatus(false), 
@@ -88,6 +101,5 @@ router.post('/change-password',
 ]), 
 changePassword
 );
-
 
 export default router;
