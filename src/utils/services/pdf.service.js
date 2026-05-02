@@ -69,7 +69,7 @@ export const getPdfSources = (results) => {
   const sourcesMap = new Map();
 
   // iterate to extract pdf id and name
-  results.forEach(r => {
+  results.splice(0, 2).forEach(r => {
     if (!sourcesMap.has(r.pdf_id)) {
       sourcesMap.set(r.pdf_id, {
         id: r.pdf_id,

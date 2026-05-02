@@ -293,7 +293,7 @@ export const getAnswersStream = async (req, res, next) => {
   JOIN pdf_chunk pc ON pdf.id = pc.pdf_id
   WHERE user_id = ${req.user.id}::uuid
   ORDER BY similarity DESC
-  LIMIT 5
+  LIMIT 8
 `
     );
 
