@@ -46,6 +46,8 @@ model conversation {
   id         String    @id @default(uuid()) @db.Uuid
   user_id    String    @db.Uuid
   created_at DateTime  @default(now())
+  // memory of the conversation for context in follow-up questions, stored as JSON string of an array of {role, content}
+  memory     Json     @default("[]") // initialize with empty array
   messages   message[]
   user user @relation(fields: [user_id], references: [id], onDelete: Cascade)
 
