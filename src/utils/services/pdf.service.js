@@ -63,20 +63,3 @@ export const getPdfHash = (fileBuffer) => {
   .digest('hex')
   .slice(0, 20);
 }
-
-// get pdf sources - useful to extract the answer sources of a question
-export const getPdfSources = (results) => {
-  const sourcesMap = new Map();
-
-  // iterate to extract pdf id and name
-  results.splice(0, 2).forEach(r => {
-    if (!sourcesMap.has(r.pdf_id)) {
-      sourcesMap.set(r.pdf_id, {
-        id: r.pdf_id,
-        file_name: r.file_name
-      });
-    }
-  });
-  
-  return Array.from(sourcesMap.values());
-}
