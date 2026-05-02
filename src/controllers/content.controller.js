@@ -3,9 +3,11 @@ import { getAnswersByAi, getAnswersByAiStream, getEmbeddings } from "../utils/se
 import { cleanPdfText, getPdfChunks, getPdfHash, getPdfSources, validatePdfResult } from "../utils/services/pdf.service.js";
 import { extractText } from "unpdf";
 import { deleteCache, getCache, setCache } from "../utils/services/cache.service.js";
-import { getOrCreateConversation, saveMessage } from "../utils/services/conversation.service.js";
+import { getOrCreateConversation, saveMessage, updateConversationMemory } from "../utils/services/conversation.service.js";
 import prismaClient from "../configs/prisma.config.js";
+import opError from "../utils/classes/opError.class.js";
 
+// upload file ------------------------------------------------
 export const uploadFile = async (req, res, next) => {
   const file = req.file;
 
@@ -61,7 +63,7 @@ export const uploadFile = async (req, res, next) => {
     );
 
   });
-  
+
   // invalidate the full user PDF list cache
   // key is flat so this always hits the right key
   await deleteCache(`user-pdfs:${req.user.id}`);
@@ -75,27 +77,27 @@ export const uploadFile = async (req, res, next) => {
   })
 }
 
-// get answers without streaming
+// get answers without streaming -----------------------------------------------------
 export const getAnswers = async (req, res, next) => {
 
-    const { question, conversationId } = req.body;
+  const { question, conversationId } = req.body;
 
-    // get or create conversation
-    const conversation = await getOrCreateConversation(req.user.id, conversationId);
+  // get or create conversation
+  const conversation = await getOrCreateConversation(req.user.id, conversationId);
 
-    // save user message 
-    await saveMessage(conversation.id, question, 'USER');
+  // save user message 
+  await saveMessage(conversation.id, question, 'USER');
 
-    // get embeddings
-    const embeddingsDetails = await getEmbeddings([question]);
+  // get embeddings
+  const embeddingsDetails = await getEmbeddings([question]);
 
-    if (!embeddingsDetails?.[0]?.values) {
-      throw new Error("Embedding generation failed");
-    }
+  if (!embeddingsDetails?.[0]?.values) {
+    throw new opError("Embedding generation failed", 502);
+  }
 
-    // search vector DB
-    const results = await prismaClient.$queryRaw(
-Prisma.sql`
+  // search vector DB
+  const results = await prismaClient.$queryRaw(
+    Prisma.sql`
       SELECT 
         pdf_id, 
         file_name, 
@@ -109,66 +111,76 @@ Prisma.sql`
       ORDER BY similarity DESC
       LIMIT 5
       `
-    );
+  );
 
-    // if no results found or similarity is too low
-    const similarity = Number(results?.[0]?.similarity || 0);
+  // if no results found or similarity is too low
+  const similarity = Number(results?.[0]?.similarity || 0);
 
-    if (!results.length || similarity < 0.5) {
+  if (!results.length || similarity < 0.5) {
+    // weak/no PDF context — check if this is a follow-up question
+    if (!Array.isArray(conversation.memory) || conversation.memory.length === 0) {
+      // no memory, no PDF context → cannot answer
       return res.status(200).json({
         data: {
           answer: "No relevant information found across your uploaded documents."
         }
       });
     }
+    // memory exists → treat as follow-up answer (context will be empty, memory will be used)
+  }
 
-    // unique + sorted pdfIds (stable cache key)
-    const pdfIds = [...new Set(results.map(r => r.pdf_id))].sort();
-    const keySource = `${question.trim().toLowerCase()}:${pdfIds.join(',')}:${req.user.id}`;
+  // unique + sorted pdfIds (stable cache key) 
+  const pdfIds = results.length > 0 ? [...new Set(results.map(r => r.pdf_id))].sort() : [];
+  const keySource = `${question.trim().toLowerCase()}:${pdfIds.join(',')}:${req.user.id}`;
 
 
-  // array of sources
-  const sources = getPdfSources(results);
-    
-    let data = await getCache(keySource);
-    const isCached = !!(data && data.answer);
-    
-    if (!isCached) {
-      // clean context
-      const context = results.map(r => r.chunk_text).join("\n\n");
-      
-      // generate answer
-      const answer = await getAnswersByAi({ context, question });
-      
-      // save assistant message
-      await saveMessage(conversation.id, answer, 'ASSISTANT');
-      
-      data = {
-        answer,
-        sources
-      };
+  // array of sources (empty if no strong PDF match)
+  const sources = results.length > 0 ? getPdfSources(results) : [];
 
-      // cache it
-      await setCache(keySource, data, 600);
-    }
+  let data = await getCache(keySource);
+  const isCached = !!(data && data.answer);
 
-    else{
-      // save assistant message
+  if (!isCached) {
+    // clean context (may be empty for follow-up questions with weak PDF matches)
+    const context = results.length > 0 ? results.map(r => r.chunk_text).join("\n\n") : "";
+
+    // generate answer
+    const answer = await getAnswersByAi({ context, question, memory: conversation.memory });
+
+    // save assistant message
+    await saveMessage(conversation.id, answer, 'ASSISTANT');
+
+    data = {
+      answer,
+      sources
+    };
+
+    // cache it
+    await setCache(keySource, data, 600);
+  }
+
+  else {
+    // save assistant message
+    try {
       await saveMessage(conversation.id, data.answer, 'ASSISTANT');
-
+    } catch (err) {
+      console.error('Error saving assistant message from cache:', err);
     }
 
-    return res.status(200).json({
-      data: {
-        content: data,
-        conversationId: conversation.id,
-        sources,
-        isCached
-      }
-    });
+    // do NOT update memory for cached answers to avoid duplicate context
+  }
+
+  return res.status(200).json({
+    data: {
+      content: data,
+      conversationId: conversation.id,
+      sources,
+      isCached
+    }
+  });
 };
 
-// user's all uploaded files details (name, created_at)
+// user's all uploaded files details (name, created_at) -----------------------------------------------
 export const getMyFiles = async (req, res, next) => {
   // cache key
   // this way uploadFile and deleteMyFile can always invalidate with one simple key
@@ -213,7 +225,7 @@ export const getMyFiles = async (req, res, next) => {
 
 };
 
-// delete user's file
+// delete user's file --------------------------------------------------
 export const deleteMyFile = async (req, res, next) => {
   const { fileId } = req.params;
 
@@ -235,27 +247,22 @@ export const deleteMyFile = async (req, res, next) => {
   });
 }
 
+// get answer with streaming (SSE) -------------------------------------------------
 export const getAnswersStream = async (req, res, next) => {
   const { question, conversationId } = req.body || {};
 
-  // headers for stream
   res.setHeader('Connection', 'keep-alive')
   res.setHeader('Cache-Control', 'no-cache')
   res.setHeader('Content-Type', 'text/event-stream')
-
   res.flushHeaders()
 
-  // helper to write an SSE event
   const sendEvent = (eventType, payload) => {
     res.write(`data: ${JSON.stringify({ type: eventType, ...payload })}\n\n`);
   };
 
-  // get or initiate a conversation
   let conversation;
   try {
     conversation = await getOrCreateConversation(req.user.id, conversationId);
-
-    // save message with flag of SUCCESS
     await saveMessage(conversation.id, question, 'USER', 'SUCCESS')
   } catch (err) {
     console.log(err);
@@ -266,20 +273,15 @@ export const getAnswersStream = async (req, res, next) => {
     return;
   }
 
-  // delete the messages from cache (latest message page)
   try {
     await deleteCache(`messages:${req.user.id}:${conversation.id}:first`);
   } catch (err) {
     console.log(err);
-    // non-critical, continue even if cache deletion fails
   }
 
   try {
-
-    // get embedding of question
     const embeddingDetails = await getEmbeddings([question]);
 
-    // vector search
     const results = await prismaClient.$queryRaw(
       Prisma.sql`
   SELECT 
@@ -297,48 +299,62 @@ export const getAnswersStream = async (req, res, next) => {
 `
     );
 
-    // no relevant context found
-    if (results.length === 0 || parseFloat(results[0].similarity) < 0.5) {
+    const isWeakContext = results.length === 0 || parseFloat(results[0].similarity) < 0.5;
 
-      // save message with flag of NO RESULT FOUND
-      await saveMessage(conversation.id, '', 'ASSISTANT', 'NO_RESULT')
-
-      sendEvent("done", {
-        token: "No relevant information found across your uploaded documents.",
-        conversationId: conversation.id,
-        sources: [],
-        isCached: false
-      });
-      res.end();
-      return;
+    if (isWeakContext) {
+      if (!Array.isArray(conversation.memory) || conversation.memory.length === 0) {
+        await saveMessage(conversation.id, '', 'ASSISTANT', 'NO_RESULT')
+        sendEvent("chunk", {
+          token: "No relevant information found across your uploaded documents."
+        });
+        sendEvent("done", {
+          conversationId: conversation.id,
+          sources: [],
+          isCached: false
+        });
+        res.end();
+        return;
+      }
     }
 
-    
-    // unique + sorted pdfIds (stable cache key)
-    const pdfIds = [...new Set(results.map(r => r.pdf_id))].sort();
-    const keySource = `${question.trim().toLowerCase()}:${pdfIds.join(',')}:${req.user.id}`;    
-    
-    // check cache before streaming
+    // check cache for the simiilar question with the same context (pdfIds or memory) to reuse the answer if possible
+    let keySource;
     let cached;
+
+    // for caching: if there's a strong PDF context, use pdfIds; if weak context, use memory content (which is the only context available)
+    if (!isWeakContext) {
+      const pdfIds = [...new Set(results.map(r => r.pdf_id))].sort();
+      keySource = `db:${question.trim().toLowerCase()}:${pdfIds.join(',')}:${req.user.id}`;
+
+    } else {
+      keySource = `memory:${question.trim().toLowerCase()}:${conversation.memory.map(m => m.content).join(' ')}:${req.user.id}`;
+    }
+
+
+    if(!isWeakContext){
     try {
       cached = await getCache(keySource);
     } catch (err) {
       console.log(err);
-      // non-critical, continue even if cache fetch fails
     }
-
-    if (cached && cached.answer) {
-
-      // save assistant's message
-      await saveMessage(conversation.id, cached.answer, 'ASSISTANT', 'SUCCESS')
+  }
+  
     
-      // simulate streaming from cache — split by word and send
+    if (cached && cached.answer ) {
+      await saveMessage(conversation.id, cached.answer, 'ASSISTANT', 'SUCCESS')
+
+      try {
+        // update conversation memory
+        await updateConversationMemory(conversation, { question, answer: cached.answer });
+      } catch (err) {
+        console.error('CRITICAL: Error updating conversation memory:', err);
+      }
+
       const words = cached.answer.split(" ");
       for (const word of words) {
         sendEvent("chunk", { token: word + " " });
       }
 
-      // send final event with sources
       sendEvent("done", {
         conversationId: conversation.id,
         sources: cached.sources,
@@ -349,37 +365,50 @@ export const getAnswersStream = async (req, res, next) => {
       return;
     }
 
-    // clean context
-    const context = results.map(r => r.chunk_text).join("\n\n");
+    const context = results.length > 0 ? results.map(r => r.chunk_text).join("\n\n") : "";
 
-    // stream answer from LLM
     await getAnswersByAiStream({
       context,
       question,
+      memory: conversation.memory,
 
-      // called for every token — write to SSE immediately
       onChunk: (token) => {
         sendEvent("chunk", { token });
       },
 
-      // called when stream is fully done
       onDone: async (fullAnswer) => {
+        try {
+          await saveMessage(conversation.id, fullAnswer, 'ASSISTANT', 'SUCCESS')
+        } catch (err) {
+          console.error('Error saving assistant message:', err);
+          sendEvent("error", {
+            conversationId: conversation.id,
+            message: process.env.NODE_ENV === 'development'
+              ? (err.message || "Failed to save message.") : "Something went wrong."
+          });
+          res.end();
+          return;
+        }
 
-        // save assistant's message in DB
-        await saveMessage(conversation.id, fullAnswer, 'ASSISTANT', 'SUCCESS')
+        try {
+          await updateConversationMemory(conversation, { question, answer: fullAnswer });
+        } catch (err) {
+          console.error('CRITICAL: Error updating conversation memory:', err);
+        }
 
-        // get answer sources
-        const sources = getPdfSources(results);
+        let sources = [];
+        try {
+          sources = !isWeakContext ? getPdfSources(results) : [];
+        } catch (err) {
+          console.error('Error getting PDF sources:', err);
+        }
 
-        // save to cache
         try {
           await setCache(keySource, { answer: fullAnswer, sources }, 600);
         } catch (err) {
-          console.log(err);
-          // non-critical, continue even if cache set fails
+          console.log('Non-critical: Cache set failed:', err);
         }
 
-        // send final event with sources
         sendEvent("done", { conversationId: conversation.id, sources, isCached: false });
         res.end();
       },
@@ -387,15 +416,11 @@ export const getAnswersStream = async (req, res, next) => {
 
   } catch (err) {
     console.log(err);
-
-    // SSE connections can't use normal error middleware
-    // so we send the error as an SSE event and close
     sendEvent("error", {
       conversationId: conversation.id,
-      message: err.message || "Something went wrong."
+      message: process.env.NODE_ENV === 'development'
+        ? (err.message || "Failed to process the question.") : "Something went wrong."
     });
-
     res.end();
   }
-
 }
