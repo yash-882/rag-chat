@@ -274,7 +274,8 @@ export const getAnswersStream = async (req, res, next) => {
     const results = await prismaClient.$queryRaw(
       Prisma.sql`
   SELECT 
-    pc.chunk_text, 
+    pc.chunk_text,
+    file_name,
     1 - (
       embedding <=> ${JSON.stringify(embeddingDetails[0].values)}::vector
     ) AS similarity
@@ -282,7 +283,7 @@ export const getAnswersStream = async (req, res, next) => {
   JOIN pdf_chunk pc ON pdf.id = pc.pdf_id
   WHERE user_id = ${req.user.id}::uuid
   ORDER BY similarity DESC
-  LIMIT 8
+  LIMIT 7
 `
     );
 
@@ -307,7 +308,9 @@ export const getAnswersStream = async (req, res, next) => {
     }
 
     // clean context
-    const context = results.length > 0 ? results.map(r => r.chunk_text).join("\n\n") : "";
+    const context = results.length > 0 ? 
+    results.map(r => `[Source: ${r.file_name}]\n${r.chunk_text}`).join("\n\n") 
+    : "No context available.";
 
     // generate answer with streaming
     await getAnswersByAiStream({

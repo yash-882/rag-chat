@@ -1,5 +1,6 @@
 import googleGenAI from "../../configs/googleGenAi.config.js";
 import { openai } from "../../configs/openAi.config.js";
+import { buildSystemPrompt } from "../../constants/system.prompt.js";
 import opError from "../classes/opError.class.js";
 
 // generate embeddings
@@ -25,40 +26,6 @@ export const getEmbeddings = async (textArr) => {
 
     return response.embeddings;
 }
-
-// build the system prompt (shared between streaming and non-streaming)
-const buildSystemPrompt = (context, memory) => {
-    // format memory array into readable conversation history
-    let formattedMemory = 'No previous conversation.';
-
-    if (Array.isArray(memory) && memory.length > 0) {
-        formattedMemory = memory
-            .map(msg => `${msg.role}: ${msg.content}`)
-            .join('\n');
-    }
-
-    // let the AI know which context to use (follow-up or fresh question)
-    return `
-You are an assistant answering a user's question.
-
-Context:
-${context}
-
-Conversation history:
-${formattedMemory}
-
-Rules:
-
-Decide whether the question depends on past conversation.
-If it does, use the conversation history as primary context.
-Otherwise, rely on the provided context.
-If both are useful, combine them carefully.
-Do not invent or assume information not present.
-Do not mention "context" or "memory" explicitly.
-If the answer cannot be determined, say so clearly.
-Answer naturally, directly, and concisely.
-`
-};
 
 // generate text-based answers
 export const getAnswersByAi = async ({ context, question, memory }) => {
