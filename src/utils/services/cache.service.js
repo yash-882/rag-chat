@@ -13,7 +13,7 @@ export const getCache = async (keySource, isRealKey=false) => {
 }
 
 // set cache 
-export const setCache = async (keySource, data, ttl = 300, isRealKey=false) => {
+export const setCache = async (keySource, data, ttl = 300, isRealKey=false, isUpdate=false) => {
     if(isRealKey === true){
         return await redisClient.set(keySource, JSON.stringify(data), {
             expiration:{ type: 'EX', value: ttl }
@@ -21,7 +21,7 @@ export const setCache = async (keySource, data, ttl = 300, isRealKey=false) => {
     }
 
     const redis = new RedisService(keySource, 'CACHE');
-    await redis.setShortLivedData(data, ttl, false);
+    await redis.setShortLivedData(data, ttl, isUpdate);
 
     // return key
     return redis.key

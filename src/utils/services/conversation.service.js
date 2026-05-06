@@ -70,7 +70,7 @@ export const parseMessageCursor = (lastMsgTime, lastMsgSeq) => {
     lastMsgTime,
     lastMsgSeq: lastMsgSeq ? Number(lastMsgSeq) : null
   }
-}
+};
 
 // update conversation memory (for follow-up question context)
 export const updateConversationMemory = async (conversation, chat) => {

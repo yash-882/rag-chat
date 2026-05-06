@@ -1,7 +1,12 @@
 import opError from "../utils/classes/opError.class.js";
-import { parseMessageCursor } from "../utils/services/conversation.service.js";
-import { getCache, setCache } from "../utils/services/cache.service.js";
 import prisma from "../configs/prisma.config.js";
+import { parseMessageCursor } from "../utils/services/conversation.service.js";
+import { buildMessageWhereClause, buildNextMessageCursor } from "../utils/queries/conversation.queries.js";
+import {
+  fetchMessagesFromCache,
+  cacheMessages,
+  invalidateConversationCache,
+} from "../utils/services/conversationCache.service.js";
 
 // get all messages for a specific conversation
 export const getMessages = async (req, res, next) => {
@@ -10,32 +15,17 @@ export const getMessages = async (req, res, next) => {
   limit = Number(limit);
   
   // parses the cursors (type conversions), throws error if cursors are invalid
-  const { lastMsgTime, lastMsgSeq } = parseMessageCursor(last_msg_time, last_msg_seq);  
+  const { lastMsgTime, lastMsgSeq } = parseMessageCursor(last_msg_time, last_msg_seq);
 
-  // cache key 
-  const cacheKey = lastMsgSeq
-    ? `messages:${req.user.id}:${conversationId}:${lastMsgTime.toISOString()}:${lastMsgSeq}`
-    : `messages:${req.user.id}:${conversationId}:first`;
+  // try to fetch from cache
+  const cachedMessages = await fetchMessagesFromCache(req.user.id, conversationId, lastMsgTime, lastMsgSeq);
 
-    // check cache
-  const cachedMessages = await getCache(cacheKey);
-
-  // next message cursor
-  let nextMsgCursor = cachedMessages?.length > 0
-    ? cachedMessages[cachedMessages.length - 1]
-    : null;
-
-
-  if (cachedMessages) {    
+  if (cachedMessages) {
+    const nextCursor = buildNextMessageCursor(cachedMessages);
     return res.status(200).json({
       status: 'success',
       data: {
-        cursor: nextMsgCursor
-        ? {
-            created_at: nextMsgCursor.created_at,
-            last_msg_seq: nextMsgCursor.seq
-          }
-        : null,
+        cursor: nextCursor,
         messages: cachedMessages,
       },
     });
@@ -53,29 +43,10 @@ export const getMessages = async (req, res, next) => {
     return next(new opError('Conversation not found.', 404));
   }
 
-  const whereClause = {
-    conversation_id: conversationId,
-  };
+  // build query where clause for message pagination
+  const whereClause = buildMessageWhereClause(conversationId, lastMsgTime, lastMsgSeq);
 
-  // if the last sent msg props are passed 
-  if (lastMsgTime && lastMsgSeq) {
-    whereClause.OR = [
-      { created_at: { lt: lastMsgTime } },
-
-      // ensures we don't skip messages with the exact same Datetime
-      {
-        created_at: lastMsgTime,
-        seq: { lt: lastMsgSeq } // tiebreaker
-      }
-    ];
-  } 
-  
-  // default filter
-  else {
-    whereClause.created_at = { lt: lastMsgTime };
-  }
-
-  // get messages
+  // get messages from database
   const messages = await prisma.message.findMany({
     where: whereClause,
     orderBy: [
@@ -85,25 +56,16 @@ export const getMessages = async (req, res, next) => {
     take: limit
   });
 
-  // get last message details
-  nextMsgCursor = messages.length > 0
-    ? messages[messages.length - 1]
-    : null;
+  // cache messages and set conversation version
+  await cacheMessages(req.user.id, conversationId, messages, lastMsgTime, lastMsgSeq);
 
-
-  // store to cache
-  await setCache(cacheKey, messages, 600);
+  // build cursor for pagination
+  const nextCursor = buildNextMessageCursor(messages);
 
   res.status(200).json({
     status: 'success',
     data: {
-    // cursor points to the last message in this batch, used for keyset pagination
-      cursor: nextMsgCursor
-        ? {
-            created_at: nextMsgCursor.created_at,
-            last_msg_seq: nextMsgCursor.seq
-          }
-        : null,
+      cursor: nextCursor,
       messages,
     },
   });
@@ -120,6 +82,9 @@ export const deleteConversation = async (req, res, next) => {
     },
   });
 
+  // invalidate conversation cache
+  await invalidateConversationCache(req.user.id, conversationId);
+
   res.status(200).json({
     status: 'success',
     message: 'Conversation deleted successfully.',
@@ -128,7 +93,7 @@ export const deleteConversation = async (req, res, next) => {
 
 // get all conversations for a user
 export const getMyConversations = async (req, res, next) => {
-  const {skip, limit, page} = req.pagination;
+  const { skip, limit, page } = req.pagination;
   const conversations = await prisma.conversation.findMany({
     where: {
       user_id: req.user.id,
