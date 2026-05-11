@@ -82,77 +82,117 @@ export const getAnswers = async (req, res, next) => {
 
   const { question, conversationId } = req.body;
 
-  // get or create conversation
-  const conversation = await getOrCreateConversation(req.user.id, conversationId);
-
-  // save user message 
-  await saveMessage(conversation.id, question, 'USER');
-
-  // get embeddings
-  const cacheKey = `embedding:${question.trim().toLowerCase()}:${req.user.id}`;
-  let embeddingsDetails = await getCache(cacheKey);
-  if (!embeddingsDetails) {
-    embeddingsDetails = await getEmbeddings([question]);
-    await setCache(cacheKey, embeddingsDetails, 3600);
+  // get or create conversation, and save the user question as the first message in the conversation
+  let conversation;
+  try {
+    conversation = await getOrCreateConversation(req.user.id, conversationId);
+    await saveMessage(conversation.id, question, 'USER', 'SUCCESS');
+  } catch (err) {
+    console.log(err);
+    return next(err);
   }
 
-  if (!embeddingsDetails?.[0]?.values) {
-    throw new opError("Embedding generation failed", 502);
+  // invalidate the first page of messages cache for this conversation
+  // to ensure the new question appears in the message list immediately (if the client is fetching messages with pagination)
+  try {
+    await deleteCache(`messages:${req.user.id}:${conversation.id}:first`);
+  } catch (err) {
+    console.log(err);
   }
 
-  // search vector DB
-  const results = await prismaClient.$queryRaw(
-    Prisma.sql`
-      SELECT 
-        pdf_id, 
-        file_name, 
-        pc.chunk_text, 
-        1 - (
-          embedding <=> ${JSON.stringify(embeddingsDetails[0].values)}::vector
-        ) AS similarity
-      FROM pdf
-      JOIN pdf_chunk pc ON pdf.id = pc.pdf_id
-      WHERE user_id = ${req.user.id}::uuid
-      ORDER BY similarity DESC
-      LIMIT 5
-      `
-  );
+  // get embeddings for the question to search for relevant PDF chunks as context for the answer
+  try {
+    const cacheKey = `embedding:${question.trim().toLowerCase()}:${req.user.id}`;
 
-  // if no results found or similarity is too low
-  const similarity = Number(results?.[0]?.similarity || 0);
+    // check cache for embeddings
+    let embeddingsDetails = await getCache(cacheKey);
 
-  if (!results.length || similarity < 0.5) {
-    if (!Array.isArray(conversation.memory) || conversation.memory.length === 0) {
+    if (!embeddingsDetails || !embeddingsDetails[0]?.values) {
+      
+      embeddingsDetails = await getEmbeddings([question]);
+      await setCache(cacheKey, embeddingsDetails, 3600); // cache embeddings to avoid redundant calls for the same question
+    }
+
+    // search vector DB
+    const results = await prismaClient.$queryRaw(
+      Prisma.sql`
+        SELECT 
+          pdf_id, 
+          file_name, 
+          pc.chunk_text, 
+          1 - (
+            embedding <=> ${JSON.stringify(embeddingsDetails[0].values)}::vector
+          ) AS similarity
+        FROM pdf
+        JOIN pdf_chunk pc ON pdf.id = pc.pdf_id
+        WHERE user_id = ${req.user.id}::uuid
+        ORDER BY similarity DESC
+        LIMIT 5
+        `
+    );
+
+    // if no results found or similarity is too low, treat as weak context (still try to answer with memory if exists, but skip PDF sources)
+    const isWeakContext = results.length === 0 || parseFloat(results[0].similarity) < 0.5;
+
+    if (isWeakContext) {
+      if (!Array.isArray(conversation.memory) || conversation.memory.length === 0) {
+        await saveMessage(conversation.id, '', 'ASSISTANT', 'NO_RESULT');
+        return res.status(200).json({
+          data: {
+            answer: "No relevant information found across your uploaded documents."
+          }
+        });
+      }
+    }
+
+    // clean context
+    const context = results.length > 0 ?
+      results.map(r => `[Source: ${r.file_name}]\n${r.chunk_text}`).join("\n\n")
+      : "No context available.";
+
+    // generate answer
+    const answer = await getAnswersByAi({
+      context: isWeakContext ? "No context" : context, // if context is weak, send empty string to force answer based on memory only
+      question,
+      memory: conversation.memory
+    });
+
+    // if the answer is empty, treat as no result (can happen due to response length limits or AI service issues
+    const isEmptyAnswer = !answer || answer.trim() === "";
+    if(isEmptyAnswer) {
       return res.status(200).json({
         data: {
-          answer: "No relevant information found across your uploaded documents."
+          message: "Unable to generate a response right now. This may be due to response length limits or temporary AI service issues."
         }
       });
+     }
+
+    // save assistant message
+    try {
+      await saveMessage(conversation.id, answer, 'ASSISTANT', 'SUCCESS');
+    } catch (err) {
+      console.error('Error saving assistant message:', err);
+      return next(err);
     }
-  }
 
-  // clean context
-  const context = results.length > 0 ? results.map(r => r.chunk_text).join("\n\n") : "";
+    // update memory with the full question and answer
+    try {
+      await updateConversationMemory(conversation, { question, answer });
+    } catch (err) {
+      console.error('CRITICAL: Error updating conversation memory:', err);
+    }
 
-  // generate answer
-  const answer = await getAnswersByAi({ context, question, memory: conversation.memory });
+    return res.status(200).json({
+      data: {
+        answer,
+        conversationId: conversation.id,
+      }
+    });
 
-  // save assistant message
-  await saveMessage(conversation.id, answer, 'ASSISTANT');
-
-  // update memory
-  try {
-    await updateConversationMemory(conversation, { question, answer });
   } catch (err) {
-    console.error('CRITICAL: Error updating conversation memory:', err);
+    console.log(err);
+    return next(err);
   }
-
-  return res.status(200).json({
-    data: {
-      answer,
-      conversationId: conversation.id,
-    }
-  });
 };
 
 // user's all uploaded files details (name, created_at) -----------------------------------------------
@@ -314,38 +354,53 @@ export const getAnswersStream = async (req, res, next) => {
 
     // generate answer with streaming
     await getAnswersByAiStream({
-      context,
+      context: isWeakContext ? "No context" : context, // if context is weak, send empty string to force answer based on memory only
       question,
       memory: conversation.memory,
 
       // called per chunk retrieved from the LLM
       onChunk: (token) => {
+        console.log('chunks', token);
+        
         sendEvent("chunk", { token });
       },
 
       // called when the full answer has been sent
       onDone: async (fullAnswer) => {
-        try {
-          await saveMessage(conversation.id, fullAnswer, 'ASSISTANT', 'SUCCESS')
-        } catch (err) {
-          console.error('Error saving assistant message:', err);
-          sendEvent("error", {
-            conversationId: conversation.id,
-            message: process.env.NODE_ENV === 'development'
-              ? (err.message || "Failed to save message.") : "Something went wrong."
-          });
-          res.end();
-          return;
-        }
 
-        // update memory with the full question and answer (not per chunk to avoid fragmentation and context dilution)
-        try {
+        // if the full answer is empty, treat as no result (can happen due to response length limits or AI service issues
+        const isEmptyAnswer = !fullAnswer || fullAnswer.trim() === "";
+        if(!isEmptyAnswer) {
+          
+          try {
+          // save assistant message with full answer
+          await saveMessage(conversation.id, fullAnswer, 'ASSISTANT', 'SUCCESS');
+
+          // update memory with the full question and answer (not per chunk to avoid fragmentation and context dilution
           await updateConversationMemory(conversation, { question, answer: fullAnswer });
-        } catch (err) {
-          console.error('CRITICAL: Error updating conversation memory:', err);
-        }
+    
 
-        sendEvent("done", { conversationId: conversation.id, });
+          } catch (err) {
+            console.error('Error saving assistant message:', err);
+            sendEvent("error", {
+              conversationId: conversation.id,
+              message: process.env.NODE_ENV === 'development'
+              ? (err.message || "Failed to save message.") : "Something went wrong."
+            });
+            res.end();
+            return;
+          }
+        }
+         //fallback display message for empty/failed generation (not saved to DB)
+        fullAnswer = isEmptyAnswer 
+        ? "Unable to generate a response right now. This may be due to response length limits or temporary AI service issues."
+        : fullAnswer;
+
+        sendEvent(isEmptyAnswer ? "error" : "done", { 
+          conversationId: conversation.id, 
+          [isEmptyAnswer ? "message" : "fullAnswer"]: fullAnswer 
+        });
+
         res.end();
       },
     });

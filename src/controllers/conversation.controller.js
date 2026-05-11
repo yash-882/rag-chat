@@ -103,6 +103,11 @@ export const getMyConversations = async (req, res, next) => {
     },
     skip,
     take: limit,
+    select:{
+      id: true,
+      user_id: true,
+      created_at: true,
+    }
   });
 
   res.status(200).json({

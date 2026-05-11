@@ -12,6 +12,7 @@ import { findUserByFilter } from '../utils/services/user.service.js';
 import { generateTokens } from '../utils/services/token.service.js';
 import prisma from '../configs/prisma.config.js';
 import passport from 'passport';
+import { deleteCache } from '../utils/services/cache.service.js';
 
 // create user
 export const initUserSignUp = async (req, res, next) => {
@@ -247,6 +248,9 @@ export const changePassword = async (req, res, next) => {
     data: { password: hashedNewPassword },
   });
 
+  // invalidate user profile cache
+  await deleteCache(`user-profile:${req.user.id}`);
+
   res.status(200).json({
     status: 'success',
     message: 'Password updated successfully.',
@@ -342,6 +346,9 @@ export const completeForgotPassword = async (req, res, next) => {
 
   // Remove the OTP data from Redis after successful password reset
   await redis.deleteData();
+
+   // invalidate user profile cache
+  await deleteCache(`user-profile:${user.id}`);
 
   res.status(200).json({
     status: 'success',
