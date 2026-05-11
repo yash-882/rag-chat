@@ -12,6 +12,7 @@ import { findUserByFilter } from '../utils/services/user.service.js';
 import { generateTokens } from '../utils/services/token.service.js';
 import prisma from '../configs/prisma.config.js';
 import passport from 'passport';
+import { deleteCache } from '../utils/services/cache.service.js';
 
 // create user
 export const initUserSignUp = async (req, res, next) => {
@@ -51,7 +52,16 @@ export const initUserSignUp = async (req, res, next) => {
   await redis.setShortLivedData(dataToStore, 600, isUpdate);
 
   // Send OTP to user's email
+
+  try {
+
   await sendEmail(email, 'OTP for Registration', `Your OTP for completing the sign-up process is: ${otp}.`);
+
+  } catch (err) {
+    // If email sending fails, clean up the Redis data to allow retrying
+    await redis.deleteData();
+    return next(new opError('Email service is currently unavailable. Please try again later.', 500));
+  }
   
   res.status(201).json({
     status: 'success',
@@ -247,6 +257,9 @@ export const changePassword = async (req, res, next) => {
     data: { password: hashedNewPassword },
   });
 
+  // invalidate user profile cache
+  await deleteCache(`user-profile:${req.user.id}`);
+
   res.status(200).json({
     status: 'success',
     message: 'Password updated successfully.',
@@ -284,10 +297,15 @@ export const initForgotPassword = async (req, res, next) => {
   // Store data for 10 minutes
   await redis.setShortLivedData(dataToStore, 600, isUpdate);
 
+  try{
   // Send OTP to user's email
   await sendEmail(email, 'Password Reset OTP', `Your OTP for resetting your password is: ${otp}.`);
-
-  console.log(otp);
+  }
+  catch(err){
+    // If email sending fails, clean up the Redis data to allow retrying
+    await redis.deleteData();
+    return next(new opError('Email service is currently unavailable. Please try again later.', 500));
+  }
 
   res.status(200).json({
     status: 'success',
@@ -342,6 +360,9 @@ export const completeForgotPassword = async (req, res, next) => {
 
   // Remove the OTP data from Redis after successful password reset
   await redis.deleteData();
+
+   // invalidate user profile cache
+  await deleteCache(`user-profile:${user.id}`);
 
   res.status(200).json({
     status: 'success',

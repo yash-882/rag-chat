@@ -31,7 +31,7 @@ export const getEmbeddings = async (textArr) => {
 export const getAnswersByAi = async ({ context, question, memory }) => {
     // GENERATE ANSWER USING LLM
     const response = await openai.chat.completions.create({
-        model: "llama-3.1-8b-instant",
+        model: process.env.LLM_MODEL || "openai/gpt-oss-20b",
         messages: [
             {
                 role: "system",
@@ -47,10 +47,6 @@ export const getAnswersByAi = async ({ context, question, memory }) => {
 
     const answer = response.choices[0].message.content;
 
-    // openai fails to respond with a message
-    if (answer.length === 0)
-        throw new opError('Could not generate answer for the provided question.', 502);
-
     return answer;
 
 }
@@ -60,7 +56,7 @@ export const getAnswersByAiStream = async ({ context, question, memory, onChunk,
     const systemPrompt = buildSystemPrompt(context, memory);
 
     const stream = await openai.chat.completions.create({
-        model: "llama-3.1-8b-instant",
+        model: process.env.LLM_MODEL || "openai/gpt-oss-20b",
         messages: [
             { role: "system", content: systemPrompt },
             { role: "user", content: question }
